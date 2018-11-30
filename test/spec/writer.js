@@ -1,1729 +1,1409 @@
-import expect from '../expect';
+'use strict';
 
-import {
-  Writer
-} from '../../';
+var _expect = require('../expect');
 
-import {
-  createModelBuilder
-} from '../helper';
+var _expect2 = _interopRequireDefault(_expect);
 
-import {
-  assign
-} from 'min-dash';
+var _ = require('../../');
 
+var _helper = require('../helper');
 
-describe('Writer', function() {
+var _minDash = require('min-dash');
 
-  var createModel = createModelBuilder('test/fixtures/model/');
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-  function createWriter(model, options) {
-    return new Writer(assign({ preamble: false }, options || {}));
-  }
+describe('Writer', function () {
 
+        var createModel = (0, _helper.createModelBuilder)('test/fixtures/model/');
 
-  describe('should export', function() {
+        function createWriter(model, options) {
+                return new _.Writer((0, _minDash.assign)({ preamble: false }, options || {}));
+        }
 
-    describe('base', function() {
+        describe('should export', function () {
 
-      var model = createModel([ 'properties' ]);
+                describe('base', function () {
 
-      it('should write xml preamble', function() {
-        // given
-        var writer = new Writer({ preamble: true });
-        var root = model.create('props:Root');
+                        var model = createModel(['properties']);
 
-        // when
-        var xml = writer.toXML(root);
+                        it('should write xml preamble', function () {
+                                // given
+                                var writer = new _.Writer({ preamble: true });
+                                var root = model.create('props:Root');
 
-        // then
-        expect(xml).to.eql(
-          '<?xml version="1.0" encoding="UTF-8"?>\n' +
-          '<props:root xmlns:props="http://properties" />');
-      });
-    });
+                                // when
+                                var xml = writer.toXML(root);
 
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<?xml version="1.0" encoding="UTF-8"?>\n' + '<props:root xmlns:props="http://properties" />');
+                        });
+                });
 
-    describe('datatypes', function() {
+                describe('datatypes', function () {
 
-      var datatypesModel = createModel(['datatype', 'datatype-external', 'datatype-aliased']);
+                        var datatypesModel = createModel(['datatype', 'datatype-external', 'datatype-aliased']);
 
-      it('via xsi:type', function() {
+                        it('via xsi:type', function () {
 
-        // given
-        var writer = createWriter(datatypesModel);
+                                // given
+                                var writer = createWriter(datatypesModel);
 
-        var root = datatypesModel.create('dt:Root');
+                                var root = datatypesModel.create('dt:Root');
 
-        root.set('bounds', datatypesModel.create('dt:Rect', { y: 100 }));
+                                root.set('bounds', datatypesModel.create('dt:Rect', { y: 100 }));
 
-        // when
-        var xml = writer.toXML(root);
+                                // when
+                                var xml = writer.toXML(root);
 
-        // then
-        expect(xml).to.eql(
-          '<dt:root xmlns:dt="http://datatypes">' +
-            '<dt:bounds y="100" />' +
-          '</dt:root>');
-      });
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<dt:root xmlns:dt="http://datatypes">' + '<dt:bounds y="100" />' + '</dt:root>');
+                        });
 
+                        it('via xsi:type / default / extension attributes', function () {
 
-      it('via xsi:type / default / extension attributes', function() {
+                                // given
+                                var writer = createWriter(datatypesModel);
 
-        // given
-        var writer = createWriter(datatypesModel);
+                                var root = datatypesModel.create('dt:Root');
 
-        var root = datatypesModel.create('dt:Root');
+                                root.set('bounds', datatypesModel.create('dt:Rect', {
+                                        y: 100,
+                                        'xmlns:f': 'http://foo',
+                                        'f:bar': 'BAR'
+                                }));
 
-        root.set('bounds', datatypesModel.create('dt:Rect', {
-          y: 100,
-          'xmlns:f': 'http://foo',
-          'f:bar': 'BAR'
-        }));
+                                // when
+                                var xml = writer.toXML(root);
 
-        // when
-        var xml = writer.toXML(root);
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<dt:root xmlns:dt="http://datatypes">' + '<dt:bounds xmlns:f="http://foo" y="100" f:bar="BAR" />' + '</dt:root>');
+                        });
 
-        // then
-        expect(xml).to.eql(
-          '<dt:root xmlns:dt="http://datatypes">' +
-            '<dt:bounds xmlns:f="http://foo" y="100" f:bar="BAR" />' +
-          '</dt:root>');
-      });
+                        it('via xsi:type / explicit / extension attributes', function () {
 
+                                // given
+                                var writer = createWriter(datatypesModel);
 
-      it('via xsi:type / explicit / extension attributes', function() {
+                                var root = datatypesModel.create('dt:Root');
 
-        // given
-        var writer = createWriter(datatypesModel);
+                                root.set('bounds', datatypesModel.create('do:Rect', {
+                                        x: 100,
+                                        'xmlns:f': 'http://foo',
+                                        'f:bar': 'BAR'
+                                }));
 
-        var root = datatypesModel.create('dt:Root');
+                                // when
+                                var xml = writer.toXML(root);
 
-        root.set('bounds', datatypesModel.create('do:Rect', {
-          x: 100,
-          'xmlns:f': 'http://foo',
-          'f:bar': 'BAR'
-        }));
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<dt:root xmlns:dt="http://datatypes">' + '<dt:bounds xmlns:do="http://datatypes2" ' + 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' + 'xmlns:f="http://foo" xsi:type="do:Rect" ' + 'x="100" f:bar="BAR" />' + '</dt:root>');
+                        });
 
-        // when
-        var xml = writer.toXML(root);
+                        it('via xsi:type / no namespace', function () {
 
-        // then
-        expect(xml).to.eql(
-          '<dt:root xmlns:dt="http://datatypes">' +
-            '<dt:bounds xmlns:do="http://datatypes2" ' +
-                       'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' +
-                       'xmlns:f="http://foo" xsi:type="do:Rect" ' +
-                       'x="100" f:bar="BAR" />' +
-          '</dt:root>'
-         );
-      });
+                                // given
+                                var writer = createWriter(datatypesModel);
 
+                                var root = datatypesModel.create('dt:Root', { xmlns: 'http://datatypes' });
 
-      it('via xsi:type / no namespace', function() {
+                                root.set('bounds', datatypesModel.create('dt:Rect', { y: 100 }));
 
-        // given
-        var writer = createWriter(datatypesModel);
+                                // when
+                                var xml = writer.toXML(root);
 
-        var root = datatypesModel.create('dt:Root', { xmlns: 'http://datatypes' });
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<root xmlns="http://datatypes">' + '<bounds y="100" />' + '</root>');
+                        });
 
-        root.set('bounds', datatypesModel.create('dt:Rect', { y: 100 }));
+                        it('via xsi:type / other namespace', function () {
 
-        // when
-        var xml = writer.toXML(root);
+                                // given
+                                var writer = createWriter(datatypesModel);
 
-        // then
-        expect(xml).to.eql(
-          '<root xmlns="http://datatypes">' +
-            '<bounds y="100" />' +
-          '</root>');
-      });
+                                var root = datatypesModel.create('dt:Root', { 'xmlns:a': 'http://datatypes' });
 
+                                root.set('bounds', datatypesModel.create('dt:Rect', { y: 100 }));
 
-      it('via xsi:type / other namespace', function() {
+                                // when
+                                var xml = writer.toXML(root);
 
-        // given
-        var writer = createWriter(datatypesModel);
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<a:root xmlns:a="http://datatypes">' + '<a:bounds y="100" />' + '</a:root>');
+                        });
 
-        var root = datatypesModel.create('dt:Root', { 'xmlns:a' : 'http://datatypes' });
+                        it('via xsi:type / in collection / other namespace)', function () {
 
-        root.set('bounds', datatypesModel.create('dt:Rect', { y: 100 }));
+                                // given
+                                var writer = createWriter(datatypesModel);
 
-        // when
-        var xml = writer.toXML(root);
+                                var root = datatypesModel.create('dt:Root');
 
-        // then
-        expect(xml).to.eql(
-          '<a:root xmlns:a="http://datatypes">' +
-            '<a:bounds y="100" />' +
-          '</a:root>');
-      });
+                                var otherBounds = root.get('otherBounds');
 
+                                otherBounds.push(datatypesModel.create('dt:Rect', { y: 200 }));
+                                otherBounds.push(datatypesModel.create('do:Rect', { x: 100 }));
 
-      it('via xsi:type / in collection / other namespace)', function() {
+                                // when
+                                var xml = writer.toXML(root);
 
-        // given
-        var writer = createWriter(datatypesModel);
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<dt:root xmlns:dt="http://datatypes" ' + 'xmlns:do="http://datatypes2" ' + 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' + '<dt:otherBounds y="200" />' + '<dt:otherBounds xsi:type="do:Rect" x="100" />' + '</dt:root>');
+                        });
 
-        var root = datatypesModel.create('dt:Root');
+                        it('via xsi:type / in collection / type prefix', function () {
 
-        var otherBounds = root.get('otherBounds');
+                                // given
+                                var writer = createWriter(datatypesModel);
 
-        otherBounds.push(datatypesModel.create('dt:Rect', { y: 200 }));
-        otherBounds.push(datatypesModel.create('do:Rect', { x: 100 }));
+                                var root = datatypesModel.create('dt:Root');
 
-        // when
-        var xml = writer.toXML(root);
+                                var otherBounds = root.get('otherBounds');
 
-        // then
-        expect(xml).to.eql(
-          '<dt:root xmlns:dt="http://datatypes" ' +
-                   'xmlns:do="http://datatypes2" ' +
-                   'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' +
-            '<dt:otherBounds y="200" />' +
-            '<dt:otherBounds xsi:type="do:Rect" x="100" />' +
-          '</dt:root>');
-      });
+                                otherBounds.push(datatypesModel.create('da:Rect', { z: 200 }));
+                                otherBounds.push(datatypesModel.create('dt:Rect', { y: 100 }));
 
+                                // when
+                                var xml = writer.toXML(root);
 
-      it('via xsi:type / in collection / type prefix', function() {
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<dt:root xmlns:dt="http://datatypes" ' + 'xmlns:da="http://datatypes-aliased" ' + 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' + '<dt:otherBounds xsi:type="da:tRect" z="200" />' + '<dt:otherBounds y="100" />' + '</dt:root>');
+                        });
 
-        // given
-        var writer = createWriter(datatypesModel);
+                        it('via xsi:type / body property', function () {
 
-        var root = datatypesModel.create('dt:Root');
+                                var propertiesModel = createModel(['properties']);
 
-        var otherBounds = root.get('otherBounds');
+                                // given
+                                var writer = createWriter(propertiesModel);
 
-        otherBounds.push(datatypesModel.create('da:Rect', { z: 200 }));
-        otherBounds.push(datatypesModel.create('dt:Rect', { y: 100 }));
+                                var body = propertiesModel.create('props:SimpleBody', {
+                                        body: '${ foo < bar }'
+                                });
+                                var root = propertiesModel.create('props:WithBody', {
+                                        someBody: body
+                                });
 
-        // when
-        var xml = writer.toXML(root);
+                                // when
+                                var xml = writer.toXML(root);
 
-        // then
-        expect(xml).to.eql(
-          '<dt:root xmlns:dt="http://datatypes" ' +
-                   'xmlns:da="http://datatypes-aliased" ' +
-                   'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' +
-            '<dt:otherBounds xsi:type="da:tRect" z="200" />' +
-            '<dt:otherBounds y="100" />' +
-          '</dt:root>');
-      });
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<props:withBody xmlns:props="http://properties" ' + 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' + '<props:someBody xsi:type="props:SimpleBody">' + '${ foo &lt; bar }' + '</props:someBody>' + '</props:withBody>');
+                        });
 
+                        it('via xsi:type / body property / formated', function () {
 
-      it('via xsi:type / body property', function() {
+                                var propertiesModel = createModel(['properties']);
 
-        var propertiesModel = createModel([ 'properties' ]);
+                                // given
+                                var writer = createWriter(propertiesModel, { format: true });
 
-        // given
-        var writer = createWriter(propertiesModel);
+                                var body = propertiesModel.create('props:SimpleBody', { body: '${ foo < bar }' });
+                                var root = propertiesModel.create('props:WithBody', { someBody: body });
 
-        var body = propertiesModel.create('props:SimpleBody', {
-          body: '${ foo < bar }'
-        });
-        var root = propertiesModel.create('props:WithBody', {
-          someBody: body
-        });
+                                // when
+                                var xml = writer.toXML(root);
 
-        // when
-        var xml = writer.toXML(root);
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<props:withBody xmlns:props="http://properties" ' + 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">\n' + '  <props:someBody xsi:type="props:SimpleBody">${ foo &lt; bar }</props:someBody>\n' + '</props:withBody>\n');
+                        });
 
-        // then
-        expect(xml).to.eql(
-          '<props:withBody xmlns:props="http://properties" ' +
-                          'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' +
-            '<props:someBody xsi:type="props:SimpleBody">' +
-              '${ foo &lt; bar }' +
-            '</props:someBody>' +
-          '</props:withBody>');
-      });
+                        it('keep empty tag', function () {
 
+                                // given
+                                var replaceModel = createModel(['replace']);
 
-      it('via xsi:type / body property / formated', function() {
+                                var writer = createWriter(replaceModel);
 
-        var propertiesModel = createModel([ 'properties' ]);
+                                var simple = replaceModel.create('r:Extension', { value: '' });
 
-        // given
-        var writer = createWriter(propertiesModel, { format: true });
+                                // when
+                                var xml = writer.toXML(simple);
 
-        var body = propertiesModel.create('props:SimpleBody', { body: '${ foo < bar }' });
-        var root = propertiesModel.create('props:WithBody', { someBody: body });
+                                var expectedXml = '<r:Extension xmlns:r="http://replace">' + '<r:value></r:value>' + '</r:Extension>';
 
-        // when
-        var xml = writer.toXML(root);
+                                // then
+                                (0, _expect2.default)(xml).to.eql(expectedXml);
+                        });
+                });
 
-        // then
-        expect(xml).to.eql(
-          '<props:withBody xmlns:props="http://properties" ' +
-                          'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">\n' +
-          '  <props:someBody xsi:type="props:SimpleBody">${ foo &lt; bar }</props:someBody>\n' +
-          '</props:withBody>\n');
-      });
+                describe('attributes', function () {
 
+                        it('with line breaks', function () {
 
-      it('keep empty tag', function() {
+                                // given
+                                var model = createModel(['properties']);
 
-        // given
-        var replaceModel = createModel([ 'replace' ]);
+                                var writer = createWriter(model);
 
-        var writer = createWriter(replaceModel);
+                                var root = model.create('props:BaseWithId', {
+                                        id: 'FOO\nBAR'
+                                });
 
-        var simple = replaceModel.create('r:Extension', { value: '' });
+                                // when
+                                var xml = writer.toXML(root);
 
-        // when
-        var xml = writer.toXML(simple);
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<props:baseWithId xmlns:props="http://properties" id="FOO&#10;BAR" />');
+                        });
 
-        var expectedXml =
-        '<r:Extension xmlns:r="http://replace">' +
-          '<r:value></r:value>' +
-        '</r:Extension>';
+                        it('inherited', function () {
 
-        // then
-        expect(xml).to.eql(expectedXml);
-      });
+                                // given
+                                var extendedModel = createModel(['properties', 'properties-extended']);
 
-    });
+                                var writer = createWriter(extendedModel);
 
+                                var root = extendedModel.create('ext:Root', {
+                                        id: 'FOO'
+                                });
 
-    describe('attributes', function() {
+                                // when
+                                var xml = writer.toXML(root);
 
-      it('with line breaks', function() {
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<ext:root xmlns:ext="http://extended" id="FOO" />');
+                        });
 
-        // given
-        var model = createModel([ 'properties' ]);
+                        it('extended', function () {
 
-        var writer = createWriter(model);
+                                // given
+                                var extendedModel = createModel(['extension/base', 'extension/custom']);
 
-        var root = model.create('props:BaseWithId', {
-          id: 'FOO\nBAR'
-        });
+                                var writer = createWriter(extendedModel);
 
-        // when
-        var xml = writer.toXML(root);
+                                var root = extendedModel.create('b:SubRoot', {
+                                        customAttr: 1,
+                                        subAttr: 'FOO',
+                                        ownAttr: 'OWN'
+                                });
 
-        // then
-        expect(xml).to.eql('<props:baseWithId xmlns:props="http://properties" id="FOO&#10;BAR" />');
-      });
+                                // when
+                                var xml = writer.toXML(root);
 
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<b:SubRoot xmlns:b="http://base" ' + 'xmlns:c="http://custom" ' + 'ownAttr="OWN" ' + 'c:customAttr="1" ' + 'subAttr="FOO" />');
+                        });
 
-      it('inherited', function() {
+                        it('ignore undefined attribute values', function () {
 
-        // given
-        var extendedModel = createModel([ 'properties', 'properties-extended' ]);
+                                // given
+                                var model = createModel(['properties']);
 
-        var writer = createWriter(extendedModel);
+                                var writer = createWriter(model);
 
-        var root = extendedModel.create('ext:Root', {
-          id: 'FOO'
-        });
+                                var root = model.create('props:BaseWithId', {
+                                        id: undefined
+                                });
 
-        // when
-        var xml = writer.toXML(root);
+                                // when
+                                var xml = writer.toXML(root);
 
-        // then
-        expect(xml).to.eql('<ext:root xmlns:ext="http://extended" id="FOO" />');
-      });
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<props:baseWithId xmlns:props="http://properties" />');
+                        });
 
+                        it('ignore null attribute values', function () {
 
-      it('extended', function() {
+                                // given
+                                var model = createModel(['properties']);
 
-        // given
-        var extendedModel = createModel([ 'extension/base', 'extension/custom' ]);
+                                var writer = createWriter(model);
 
-        var writer = createWriter(extendedModel);
+                                var root = model.create('props:BaseWithId', {
+                                        id: null
+                                });
 
-        var root = extendedModel.create('b:SubRoot', {
-          customAttr: 1,
-          subAttr: 'FOO',
-          ownAttr: 'OWN'
-        });
+                                // when
+                                var xml = writer.toXML(root);
 
-        // when
-        var xml = writer.toXML(root);
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<props:baseWithId xmlns:props="http://properties" />');
+                        });
+                });
 
-        // then
-        expect(xml).to.eql(
-            '<b:SubRoot xmlns:b="http://base" ' +
-                       'xmlns:c="http://custom" ' +
-                       'ownAttr="OWN" ' +
-                       'c:customAttr="1" ' +
-                       'subAttr="FOO" />');
-      });
+                describe('simple properties', function () {
 
+                        var model = createModel(['properties']);
 
-      it('ignore undefined attribute values', function() {
+                        it('attribute', function () {
 
-        // given
-        var model = createModel([ 'properties' ]);
+                                // given
+                                var writer = createWriter(model);
 
-        var writer = createWriter(model);
+                                var attributes = model.create('props:Attributes', { integerValue: 1000 });
 
-        var root = model.create('props:BaseWithId', {
-          id: undefined
-        });
+                                // when
+                                var xml = writer.toXML(attributes);
 
-        // when
-        var xml = writer.toXML(root);
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<props:attributes xmlns:props="http://properties" integerValue="1000" />');
+                        });
 
-        // then
-        expect(xml).to.eql('<props:baseWithId xmlns:props="http://properties" />');
-      });
+                        it('attribute, escaping special characters', function () {
 
+                                // given
+                                var writer = createWriter(model);
 
-      it('ignore null attribute values', function() {
+                                var complex = model.create('props:Complex', { id: '<>\n&' });
 
-        // given
-        var model = createModel([ 'properties' ]);
+                                // when
+                                var xml = writer.toXML(complex);
 
-        var writer = createWriter(model);
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<props:complex xmlns:props="http://properties" id="&#60;&#62;&#10;&#38;" />');
+                        });
 
-        var root = model.create('props:BaseWithId', {
-          id: null
-        });
+                        it('write integer property', function () {
 
-        // when
-        var xml = writer.toXML(root);
+                                // given
+                                var writer = createWriter(model);
 
-        // then
-        expect(xml).to.eql('<props:baseWithId xmlns:props="http://properties" />');
-      });
+                                var root = model.create('props:SimpleBodyProperties', {
+                                        intValue: 5
+                                });
 
-    });
+                                // when
+                                var xml = writer.toXML(root);
 
+                                var expectedXml = '<props:simpleBodyProperties xmlns:props="http://properties">' + '<props:intValue>5</props:intValue>' + '</props:simpleBodyProperties>';
 
-    describe('simple properties', function() {
+                                // then
+                                (0, _expect2.default)(xml).to.eql(expectedXml);
+                        });
 
-      var model = createModel([ 'properties' ]);
+                        it('write boolean property', function () {
 
-      it('attribute', function() {
+                                // given
+                                var writer = createWriter(model);
 
-        // given
-        var writer = createWriter(model);
+                                var root = model.create('props:SimpleBodyProperties', {
+                                        boolValue: false
+                                });
 
-        var attributes = model.create('props:Attributes', { integerValue: 1000 });
+                                // when
+                                var xml = writer.toXML(root);
 
-        // when
-        var xml = writer.toXML(attributes);
+                                var expectedXml = '<props:simpleBodyProperties xmlns:props="http://properties">' + '<props:boolValue>false</props:boolValue>' + '</props:simpleBodyProperties>';
 
-        // then
-        expect(xml).to.eql('<props:attributes xmlns:props="http://properties" integerValue="1000" />');
-      });
+                                // then
+                                (0, _expect2.default)(xml).to.eql(expectedXml);
+                        });
 
+                        it('write boolean property, formated', function () {
 
-      it('attribute, escaping special characters', function() {
+                                // given
+                                var writer = createWriter(model, { format: true });
 
-        // given
-        var writer = createWriter(model);
+                                var root = model.create('props:SimpleBodyProperties', {
+                                        boolValue: false
+                                });
 
-        var complex = model.create('props:Complex', { id: '<>\n&' });
+                                // when
+                                var xml = writer.toXML(root);
 
-        // when
-        var xml = writer.toXML(complex);
+                                var expectedXml = '<props:simpleBodyProperties xmlns:props="http://properties">\n' + '  <props:boolValue>false</props:boolValue>\n' + '</props:simpleBodyProperties>\n';
 
-        // then
-        expect(xml).to.eql('<props:complex xmlns:props="http://properties" id="&#60;&#62;&#10;&#38;" />');
-      });
+                                // then
+                                (0, _expect2.default)(xml).to.eql(expectedXml);
+                        });
 
+                        it('write string isMany property', function () {
 
-      it('write integer property', function() {
+                                // given
+                                var writer = createWriter(model);
 
-        // given
-        var writer = createWriter(model);
+                                var root = model.create('props:SimpleBodyProperties', {
+                                        str: ['A', 'B', 'C']
+                                });
 
-        var root = model.create('props:SimpleBodyProperties', {
-          intValue: 5
-        });
+                                // when
+                                var xml = writer.toXML(root);
 
-        // when
-        var xml = writer.toXML(root);
+                                var expectedXml = '<props:simpleBodyProperties xmlns:props="http://properties">' + '<props:str>A</props:str>' + '<props:str>B</props:str>' + '<props:str>C</props:str>' + '</props:simpleBodyProperties>';
 
-        var expectedXml =
-          '<props:simpleBodyProperties xmlns:props="http://properties">' +
-            '<props:intValue>5</props:intValue>' +
-          '</props:simpleBodyProperties>';
+                                // then
+                                (0, _expect2.default)(xml).to.eql(expectedXml);
+                        });
 
-        // then
-        expect(xml).to.eql(expectedXml);
-      });
+                        it('write string isMany property, formated', function () {
 
+                                // given
+                                var writer = createWriter(model, { format: true });
 
-      it('write boolean property', function() {
+                                var root = model.create('props:SimpleBodyProperties', {
+                                        str: ['A', 'B', 'C']
+                                });
 
-        // given
-        var writer = createWriter(model);
+                                // when
+                                var xml = writer.toXML(root);
 
-        var root = model.create('props:SimpleBodyProperties', {
-          boolValue: false
-        });
+                                var expectedXml = '<props:simpleBodyProperties xmlns:props="http://properties">\n' + '  <props:str>A</props:str>\n' + '  <props:str>B</props:str>\n' + '  <props:str>C</props:str>\n' + '</props:simpleBodyProperties>\n';
 
-        // when
-        var xml = writer.toXML(root);
+                                // then
+                                (0, _expect2.default)(xml).to.eql(expectedXml);
+                        });
+                });
 
-        var expectedXml =
-          '<props:simpleBodyProperties xmlns:props="http://properties">' +
-            '<props:boolValue>false</props:boolValue>' +
-          '</props:simpleBodyProperties>';
+                describe('embedded properties', function () {
 
-        // then
-        expect(xml).to.eql(expectedXml);
-      });
+                        var model = createModel(['properties']);
 
+                        var extendedModel = createModel(['properties', 'properties-extended']);
 
-      it('write boolean property, formated', function() {
+                        it('single', function () {
 
-        // given
-        var writer = createWriter(model, { format: true });
+                                // given
+                                var writer = createWriter(model);
 
-        var root = model.create('props:SimpleBodyProperties', {
-          boolValue: false
-        });
+                                var complexCount = model.create('props:ComplexCount', { id: 'ComplexCount_1' });
+                                var embedding = model.create('props:Embedding', { embeddedComplex: complexCount });
 
-        // when
-        var xml = writer.toXML(root);
+                                // when
+                                var xml = writer.toXML(embedding);
 
-        var expectedXml =
-          '<props:simpleBodyProperties xmlns:props="http://properties">\n' +
-          '  <props:boolValue>false</props:boolValue>\n' +
-          '</props:simpleBodyProperties>\n';
+                                var expectedXml = '<props:embedding xmlns:props="http://properties">' + '<props:complexCount id="ComplexCount_1" />' + '</props:embedding>';
 
-        // then
-        expect(xml).to.eql(expectedXml);
-      });
+                                // then
+                                (0, _expect2.default)(xml).to.eql(expectedXml);
+                        });
 
+                        it('property name', function () {
 
-      it('write string isMany property', function() {
+                                // given
+                                var writer = createWriter(model);
 
-        // given
-        var writer = createWriter(model);
+                                var propertyValue = model.create('props:BaseWithId', { id: 'PropertyValue' });
+                                var container = model.create('props:WithProperty', { propertyName: propertyValue });
 
-        var root = model.create('props:SimpleBodyProperties', {
-          str: [ 'A', 'B', 'C' ]
-        });
+                                // when
+                                var xml = writer.toXML(container);
 
-        // when
-        var xml = writer.toXML(root);
+                                var expectedXml = '<props:withProperty xmlns:props="http://properties">' + '<props:propertyName id="PropertyValue" />' + '</props:withProperty>';
 
-        var expectedXml =
-          '<props:simpleBodyProperties xmlns:props="http://properties">' +
-            '<props:str>A</props:str>' +
-            '<props:str>B</props:str>' +
-            '<props:str>C</props:str>' +
-          '</props:simpleBodyProperties>';
+                                // then
+                                (0, _expect2.default)(xml).to.eql(expectedXml);
+                        });
 
-        // then
-        expect(xml).to.eql(expectedXml);
-      });
+                        it('collection', function () {
 
+                                // given
+                                var writer = createWriter(model);
 
-      it('write string isMany property, formated', function() {
+                                var root = model.create('props:Root');
 
-        // given
-        var writer = createWriter(model, { format: true });
+                                var attributes = model.create('props:Attributes', { id: 'Attributes_1' });
+                                var simpleBody = model.create('props:SimpleBody');
+                                var containedCollection = model.create('props:ContainedCollection');
 
-        var root = model.create('props:SimpleBodyProperties', {
-          str: [ 'A', 'B', 'C' ]
-        });
+                                var any = root.get('any');
 
-        // when
-        var xml = writer.toXML(root);
+                                any.push(attributes);
+                                any.push(simpleBody);
+                                any.push(containedCollection);
 
-        var expectedXml =
-          '<props:simpleBodyProperties xmlns:props="http://properties">\n' +
-          '  <props:str>A</props:str>\n' +
-          '  <props:str>B</props:str>\n' +
-          '  <props:str>C</props:str>\n' +
-          '</props:simpleBodyProperties>\n';
+                                // when
+                                var xml = writer.toXML(root);
 
-        // then
-        expect(xml).to.eql(expectedXml);
-      });
+                                var expectedXml = '<props:root xmlns:props="http://properties">' + '<props:attributes id="Attributes_1" />' + '<props:simpleBody />' + '<props:containedCollection />' + '</props:root>';
 
-    });
+                                // then
+                                (0, _expect2.default)(xml).to.eql(expectedXml);
+                        });
 
+                        it('collection / different ns', function () {
 
-    describe('embedded properties',  function() {
+                                // given
+                                var writer = createWriter(extendedModel);
 
-      var model = createModel([ 'properties' ]);
+                                var root = extendedModel.create('ext:Root');
 
-      var extendedModel = createModel([ 'properties', 'properties-extended' ]);
+                                var attributes1 = extendedModel.create('props:Attributes', { id: 'Attributes_1' });
+                                var attributes2 = extendedModel.create('props:Attributes', { id: 'Attributes_2' });
+                                var extendedComplex = extendedModel.create('ext:ExtendedComplex', { numCount: 100 });
 
-      it('single', function() {
+                                var any = root.get('any');
 
-        // given
-        var writer = createWriter(model);
+                                any.push(attributes1);
+                                any.push(attributes2);
+                                any.push(extendedComplex);
 
-        var complexCount = model.create('props:ComplexCount', { id: 'ComplexCount_1' });
-        var embedding = model.create('props:Embedding', { embeddedComplex: complexCount });
+                                var elements = root.get('elements');
+                                elements.push(extendedModel.create('ext:Base'));
 
-        // when
-        var xml = writer.toXML(embedding);
+                                // when
+                                var xml = writer.toXML(root);
 
-        var expectedXml =
-          '<props:embedding xmlns:props="http://properties">' +
-            '<props:complexCount id="ComplexCount_1" />' +
-          '</props:embedding>';
+                                var expectedXml = '<ext:root xmlns:ext="http://extended" xmlns:props="http://properties">' + '<props:attributes id="Attributes_1" />' + '<props:attributes id="Attributes_2" />' + '<ext:extendedComplex numCount="100" />' + '<ext:base />' + '</ext:root>';
 
-        // then
-        expect(xml).to.eql(expectedXml);
-      });
+                                // then
+                                (0, _expect2.default)(xml).to.eql(expectedXml);
+                        });
+                });
 
+                describe('virtual properties', function () {
 
-      it('property name', function() {
+                        var model = createModel(['virtual']);
 
-        // given
-        var writer = createWriter(model);
+                        it('should not serialize virtual property', function () {
+                                // given
+                                var writer = createWriter(model);
 
-        var propertyValue = model.create('props:BaseWithId', { id: 'PropertyValue' });
-        var container = model.create('props:WithProperty', { propertyName: propertyValue });
+                                var root = model.create('virt:Root', {
+                                        child: model.create('virt:Child')
+                                });
 
-        // when
-        var xml = writer.toXML(container);
+                                // when
+                                var xml = writer.toXML(root);
 
-        var expectedXml =
-          '<props:withProperty xmlns:props="http://properties">' +
-            '<props:propertyName id="PropertyValue" />' +
-          '</props:withProperty>';
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<virt:Root xmlns:virt="http://virtual" />');
+                        });
+                });
 
-        // then
-        expect(xml).to.eql(expectedXml);
-      });
+                describe('body text', function () {
 
+                        var model = createModel(['properties']);
 
-      it('collection', function() {
+                        it('write body text property', function () {
 
-        // given
-        var writer = createWriter(model);
+                                // given
+                                var writer = createWriter(model);
 
-        var root = model.create('props:Root');
+                                var root = model.create('props:SimpleBody', {
+                                        body: 'textContent'
+                                });
 
-        var attributes = model.create('props:Attributes', { id: 'Attributes_1' });
-        var simpleBody = model.create('props:SimpleBody');
-        var containedCollection = model.create('props:ContainedCollection');
+                                // when
+                                var xml = writer.toXML(root);
 
-        var any = root.get('any');
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<props:simpleBody xmlns:props="http://properties">textContent</props:simpleBody>');
+                        });
 
-        any.push(attributes);
-        any.push(simpleBody);
-        any.push(containedCollection);
+                        it('write encode body property', function () {
 
-        // when
-        var xml = writer.toXML(root);
+                                // given
+                                var writer = createWriter(model);
 
-        var expectedXml =
-          '<props:root xmlns:props="http://properties">' +
-            '<props:attributes id="Attributes_1" />' +
-            '<props:simpleBody />' +
-            '<props:containedCollection />' +
-          '</props:root>';
+                                var root = model.create('props:SimpleBody', {
+                                        body: '<h2>HTML&nbsp;"markup"</h2>'
+                                });
 
-        // then
-        expect(xml).to.eql(expectedXml);
-      });
+                                // when
+                                var xml = writer.toXML(root);
 
+                                var expectedXml = '<props:simpleBody xmlns:props="http://properties">' + '&lt;h2&gt;HTML&amp;nbsp;"markup"&lt;/h2&gt;' + '</props:simpleBody>';
 
-      it('collection / different ns', function() {
+                                // then
+                                (0, _expect2.default)(xml).to.eql(expectedXml);
+                        });
 
-        // given
-        var writer = createWriter(extendedModel);
+                        it('write encode body property in subsequent calls', function () {
 
-        var root = extendedModel.create('ext:Root');
+                                // given
+                                var writer = createWriter(model);
 
-        var attributes1 = extendedModel.create('props:Attributes', { id: 'Attributes_1' });
-        var attributes2 = extendedModel.create('props:Attributes', { id: 'Attributes_2' });
-        var extendedComplex = extendedModel.create('ext:ExtendedComplex', { numCount: 100 });
+                                var root1 = model.create('props:SimpleBody', {
+                                        body: '<>'
+                                });
+                                var root2 = model.create('props:SimpleBody', {
+                                        body: '<>'
+                                });
 
-        var any = root.get('any');
+                                // when
+                                var xml1 = writer.toXML(root1);
+                                var xml2 = writer.toXML(root2);
 
-        any.push(attributes1);
-        any.push(attributes2);
-        any.push(extendedComplex);
+                                var expectedXml = '<props:simpleBody xmlns:props="http://properties">' + '&lt;&gt;' + '</props:simpleBody>';
 
-        var elements = root.get('elements');
-        elements.push(extendedModel.create('ext:Base'));
+                                // then
+                                (0, _expect2.default)(xml1).to.eql(expectedXml);
+                                (0, _expect2.default)(xml2).to.eql(expectedXml);
+                        });
 
-        // when
-        var xml = writer.toXML(root);
+                        it('write encode body property with special chars', function () {
 
-        var expectedXml =
-          '<ext:root xmlns:ext="http://extended" xmlns:props="http://properties">' +
-            '<props:attributes id="Attributes_1" />' +
-            '<props:attributes id="Attributes_2" />' +
-            '<ext:extendedComplex numCount="100" />' +
-            '<ext:base />' +
-          '</ext:root>';
+                                // given
+                                var writer = createWriter(model);
 
-        // then
-        expect(xml).to.eql(expectedXml);
-      });
+                                var root = model.create('props:SimpleBody', {
+                                        body: '&\n<>"\''
+                                });
 
-    });
+                                // when
+                                var xml = writer.toXML(root);
 
+                                var expectedXml = '<props:simpleBody xmlns:props="http://properties">' + '&amp;\n&lt;&gt;"\'' + '</props:simpleBody>';
 
-    describe('virtual properties', function() {
+                                // then
+                                (0, _expect2.default)(xml).to.eql(expectedXml);
+                        });
+                });
 
-      var model = createModel([ 'virtual' ]);
+                describe('alias', function () {
 
-      it('should not serialize virtual property', function() {
-        // given
-        var writer = createWriter(model);
+                        var model = createModel(['properties']);
 
-        var root = model.create('virt:Root', {
-          child: model.create('virt:Child')
-        });
+                        var noAliasModel = createModel(['noalias']);
 
-        // when
-        var xml = writer.toXML(root);
+                        it('lowerCase', function () {
 
-        // then
-        expect(xml).to.eql(
-          '<virt:Root xmlns:virt="http://virtual" />');
-      });
+                                // given
+                                var writer = createWriter(model);
 
-    });
+                                var root = model.create('props:Root');
 
+                                // when
+                                var xml = writer.toXML(root);
 
-    describe('body text', function() {
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<props:root xmlns:props="http://properties" />');
+                        });
 
-      var model = createModel([ 'properties' ]);
+                        it('none', function () {
 
-      it('write body text property', function() {
+                                // given
+                                var writer = createWriter(noAliasModel);
 
-        // given
-        var writer = createWriter(model);
+                                var root = noAliasModel.create('na:Root');
 
-        var root = model.create('props:SimpleBody', {
-          body: 'textContent'
-        });
+                                // when
+                                var xml = writer.toXML(root);
 
-        // when
-        var xml = writer.toXML(root);
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<na:Root xmlns:na="http://noalias" />');
+                        });
+                });
 
-        // then
-        expect(xml).to.eql('<props:simpleBody xmlns:props="http://properties">textContent</props:simpleBody>');
-      });
+                describe('ns', function () {
 
+                        var model = createModel(['properties']);
+                        var extendedModel = createModel(['properties', 'properties-extended']);
 
-      it('write encode body property', function() {
+                        it('single package', function () {
 
-        // given
-        var writer = createWriter(model);
+                                // given
+                                var writer = createWriter(model);
 
-        var root = model.create('props:SimpleBody', {
-          body: '<h2>HTML&nbsp;"markup"</h2>'
-        });
+                                var root = model.create('props:Root');
 
-        // when
-        var xml = writer.toXML(root);
+                                // when
+                                var xml = writer.toXML(root);
 
-        var expectedXml =
-          '<props:simpleBody xmlns:props="http://properties">' +
-            '&lt;h2&gt;HTML&amp;nbsp;"markup"&lt;/h2&gt;' +
-          '</props:simpleBody>';
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<props:root xmlns:props="http://properties" />');
+                        });
 
-        // then
-        expect(xml).to.eql(expectedXml);
-      });
+                        it('multiple packages', function () {
 
+                                // given
+                                var writer = createWriter(extendedModel);
 
-      it('write encode body property in subsequent calls', function() {
+                                var root = extendedModel.create('props:Root');
 
-        // given
-        var writer = createWriter(model);
+                                root.get('any').push(extendedModel.create('ext:ExtendedComplex'));
 
-        var root1 = model.create('props:SimpleBody', {
-          body: '<>'
-        });
-        var root2 = model.create('props:SimpleBody', {
-          body: '<>'
-        });
+                                // when
+                                var xml = writer.toXML(root);
 
-        // when
-        var xml1 = writer.toXML(root1);
-        var xml2 = writer.toXML(root2);
+                                var expectedXml = '<props:root xmlns:props="http://properties" ' + 'xmlns:ext="http://extended">' + '<ext:extendedComplex />' + '</props:root>';
 
-        var expectedXml =
-          '<props:simpleBody xmlns:props="http://properties">' +
-            '&lt;&gt;' +
-          '</props:simpleBody>';
+                                // then
+                                (0, _expect2.default)(xml).to.eql(expectedXml);
+                        });
 
-        // then
-        expect(xml1).to.eql(expectedXml);
-        expect(xml2).to.eql(expectedXml);
-      });
+                        it('default ns', function () {
 
+                                // given
+                                var writer = createWriter(extendedModel);
 
-      it('write encode body property with special chars', function() {
+                                var root = extendedModel.create('props:Root', { xmlns: 'http://properties' });
 
-        // given
-        var writer = createWriter(model);
+                                // when
+                                var xml = writer.toXML(root);
 
-        var root = model.create('props:SimpleBody', {
-          body: '&\n<>"\''
-        });
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<root xmlns="http://properties" />');
+                        });
 
-        // when
-        var xml = writer.toXML(root);
+                        it('default ns / attributes', function () {
 
-        var expectedXml =
-          '<props:simpleBody xmlns:props="http://properties">' +
-            '&amp;\n&lt;&gt;"\'' +
-          '</props:simpleBody>';
+                                // given
+                                var writer = createWriter(extendedModel);
 
-        // then
-        expect(xml).to.eql(expectedXml);
-      });
+                                var root = extendedModel.create('props:Root', { xmlns: 'http://properties', id: 'Root' });
 
-    });
+                                var any = root.get('any');
+                                any.push(extendedModel.create('ext:ExtendedComplex'));
+                                any.push(extendedModel.create('props:Attributes', { id: 'Attributes_2' }));
 
+                                // when
+                                var xml = writer.toXML(root);
 
-    describe('alias', function() {
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<root xmlns="http://properties" xmlns:ext="http://extended" id="Root">' + '<ext:extendedComplex />' + '<attributes id="Attributes_2" />' + '</root>');
+                        });
 
-      var model = createModel([ 'properties' ]);
+                        it('default ns / extension attributes', function () {
 
-      var noAliasModel = createModel(['noalias']);
+                                // given
+                                var writer = createWriter(extendedModel);
 
-      it('lowerCase', function() {
+                                var root = extendedModel.create('props:Root', {
+                                        xmlns: 'http://properties',
+                                        'xmlns:foo': 'http://fooo',
+                                        id: 'Root',
+                                        'foo:bar': 'BAR'
+                                });
 
-        // given
-        var writer = createWriter(model);
+                                // when
+                                var xml = writer.toXML(root);
 
-        var root = model.create('props:Root');
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<root xmlns="http://properties" xmlns:foo="http://fooo" id="Root" foo:bar="BAR" />');
+                        });
 
-        // when
-        var xml = writer.toXML(root);
+                        it('explicit ns / attributes', function () {
 
-        // then
-        expect(xml).to.eql('<props:root xmlns:props="http://properties" />');
-      });
+                                // given
+                                var writer = createWriter(extendedModel);
 
+                                var root = extendedModel.create('props:Root', { 'xmlns:foo': 'http://properties', id: 'Root' });
 
-      it('none', function() {
+                                // when
+                                var xml = writer.toXML(root);
 
-        // given
-        var writer = createWriter(noAliasModel);
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<foo:root xmlns:foo="http://properties" id="Root" />');
+                        });
+                });
 
-        var root = noAliasModel.create('na:Root');
+                describe('reference', function () {
 
-        // when
-        var xml = writer.toXML(root);
+                        var model = createModel(['properties']);
 
-        // then
-        expect(xml).to.eql('<na:Root xmlns:na="http://noalias" />');
-      });
-    });
+                        it('single', function () {
 
+                                // given
+                                var writer = createWriter(model);
 
-    describe('ns', function() {
+                                var complex = model.create('props:Complex', { id: 'Complex_1' });
+                                var referencingSingle = model.create('props:ReferencingSingle', { referencedComplex: complex });
 
-      var model = createModel([ 'properties' ]);
-      var extendedModel = createModel([ 'properties', 'properties-extended' ]);
+                                // when
+                                var xml = writer.toXML(referencingSingle);
 
-      it('single package', function() {
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<props:referencingSingle xmlns:props="http://properties" referencedComplex="Complex_1" />');
+                        });
 
-        // given
-        var writer = createWriter(model);
+                        it('collection', function () {
 
-        var root = model.create('props:Root');
+                                // given
+                                var writer = createWriter(model);
 
-        // when
-        var xml = writer.toXML(root);
+                                var complexCount = model.create('props:ComplexCount', { id: 'ComplexCount_1' });
+                                var complexNesting = model.create('props:ComplexNesting', { id: 'ComplexNesting_1' });
 
-        // then
-        expect(xml).to.eql('<props:root xmlns:props="http://properties" />');
-      });
+                                var referencingCollection = model.create('props:ReferencingCollection', {
+                                        references: [complexCount, complexNesting]
+                                });
 
+                                // when
+                                var xml = writer.toXML(referencingCollection);
 
-      it('multiple packages', function() {
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<props:referencingCollection xmlns:props="http://properties">' + '<props:references>ComplexCount_1</props:references>' + '<props:references>ComplexNesting_1</props:references>' + '</props:referencingCollection>');
+                        });
 
-        // given
-        var writer = createWriter(extendedModel);
+                        it('attribute collection', function () {
 
-        var root = extendedModel.create('props:Root');
+                                // given
+                                var writer = createWriter(model);
 
-        root.get('any').push(extendedModel.create('ext:ExtendedComplex'));
+                                var complexCount = model.create('props:ComplexCount', { id: 'ComplexCount_1' });
+                                var complexNesting = model.create('props:ComplexNesting', { id: 'ComplexNesting_1' });
 
-        // when
-        var xml = writer.toXML(root);
+                                var attrReferenceCollection = model.create('props:AttributeReferenceCollection', {
+                                        refs: [complexCount, complexNesting]
+                                });
 
-        var expectedXml =
-          '<props:root xmlns:props="http://properties" ' +
-                      'xmlns:ext="http://extended">' +
-            '<ext:extendedComplex />' +
-          '</props:root>';
+                                // when
+                                var xml = writer.toXML(attrReferenceCollection);
 
-        // then
-        expect(xml).to.eql(expectedXml);
-      });
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<props:attributeReferenceCollection xmlns:props="http://properties" refs="ComplexCount_1 ComplexNesting_1" />');
+                        });
+                });
 
+                it('redefined properties', function () {
 
-      it('default ns', function() {
+                        // given
+                        var model = createModel(['redefine']);
 
-        // given
-        var writer = createWriter(extendedModel);
+                        var writer = createWriter(model);
 
-        var root = extendedModel.create('props:Root', { xmlns: 'http://properties' });
+                        var element = model.create('r:Extension', {
+                                id: 1,
+                                name: 'FOO',
+                                value: 'BAR'
+                        });
 
-        // when
-        var xml = writer.toXML(root);
+                        var expectedXml = '<r:Extension xmlns:r="http://redefine">' + '<r:id>1</r:id>' + '<r:name>FOO</r:name>' + '<r:value>BAR</r:value>' + '</r:Extension>';
 
-        // then
-        expect(xml).to.eql('<root xmlns="http://properties" />');
-      });
+                        // when
+                        var xml = writer.toXML(element);
 
+                        // then
+                        (0, _expect2.default)(xml).to.eql(expectedXml);
+                });
 
-      it('default ns / attributes', function() {
+                it('replaced properties', function () {
 
-        // given
-        var writer = createWriter(extendedModel);
+                        // given
+                        var model = createModel(['replace']);
 
-        var root = extendedModel.create('props:Root', { xmlns: 'http://properties', id: 'Root' });
+                        var writer = createWriter(model);
 
-        var any = root.get('any');
-        any.push(extendedModel.create('ext:ExtendedComplex'));
-        any.push(extendedModel.create('props:Attributes', { id: 'Attributes_2' }));
+                        var element = model.create('r:Extension', {
+                                id: 1,
+                                name: 'FOO',
+                                value: 'BAR'
+                        });
 
-        // when
-        var xml = writer.toXML(root);
+                        var expectedXml = '<r:Extension xmlns:r="http://replace">' + '<r:name>FOO</r:name>' + '<r:value>BAR</r:value>' + '<r:id>1</r:id>' + '</r:Extension>';
 
-        // then
-        expect(xml)
-          .to.eql('<root xmlns="http://properties" xmlns:ext="http://extended" id="Root">' +
-                     '<ext:extendedComplex />' +
-                     '<attributes id="Attributes_2" />' +
-                   '</root>');
-      });
+                        // when
+                        var xml = writer.toXML(element);
 
-
-      it('default ns / extension attributes', function() {
-
-        // given
-        var writer = createWriter(extendedModel);
-
-        var root = extendedModel.create('props:Root', {
-          xmlns: 'http://properties',
-          'xmlns:foo': 'http://fooo',
-          id: 'Root',
-          'foo:bar': 'BAR'
+                        // then
+                        (0, _expect2.default)(xml).to.eql(expectedXml);
+                });
         });
 
-        // when
-        var xml = writer.toXML(root);
+        describe('extension handling', function () {
 
-        // then
-        expect(xml).to.eql('<root xmlns="http://properties" xmlns:foo="http://fooo" id="Root" foo:bar="BAR" />');
-      });
+                var extensionModel = createModel(['extensions']);
 
+                describe('attributes', function () {
 
-      it('explicit ns / attributes', function() {
+                        it('should write xsi:schemaLocation', function () {
 
-        // given
-        var writer = createWriter(extendedModel);
+                                // given
+                                var writer = createWriter(extensionModel);
 
-        var root = extendedModel.create('props:Root', { 'xmlns:foo': 'http://properties', id: 'Root' });
+                                var root = extensionModel.create('e:Root', {
+                                        'xsi:schemaLocation': 'http://fooo ./foo.xsd'
+                                });
 
-        // when
-        var xml = writer.toXML(root);
+                                // when
+                                var xml = writer.toXML(root);
 
-        // then
-        expect(xml).to.eql('<foo:root xmlns:foo="http://properties" id="Root" />');
-      });
+                                var expectedXml = '<e:root xmlns:e="http://extensions" ' + 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' + 'xsi:schemaLocation="http://fooo ./foo.xsd" />';
 
-    });
+                                // then
+                                (0, _expect2.default)(xml).to.eql(expectedXml);
+                        });
 
+                        it('should write extension attributes', function () {
 
-    describe('reference', function() {
+                                // given
+                                var writer = createWriter(extensionModel);
 
-      var model = createModel([ 'properties' ]);
+                                var root = extensionModel.create('e:Root', {
+                                        'xmlns:foo': 'http://fooo',
+                                        'foo:bar': 'BAR'
+                                });
 
-      it('single', function() {
+                                // when
+                                var xml = writer.toXML(root);
 
-        // given
-        var writer = createWriter(model);
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<e:root xmlns:e="http://extensions" xmlns:foo="http://fooo" foo:bar="BAR" />');
+                        });
 
-        var complex = model.create('props:Complex', { id: 'Complex_1' });
-        var referencingSingle = model.create('props:ReferencingSingle', { referencedComplex: complex });
+                        describe('should deconflict namespace prefixes', function () {
 
-        // when
-        var xml = writer.toXML(referencingSingle);
+                                it('on nested Any', function () {
 
-        // then
-        expect(xml).to.eql('<props:referencingSingle xmlns:props="http://properties" referencedComplex="Complex_1" />');
-      });
+                                        // given
+                                        var writer = createWriter(extensionModel);
 
+                                        var root = extensionModel.create('e:Root', {
+                                                extensions: [extensionModel.createAny('e:foo', 'http://not-extensions', {
+                                                        foo: 'BAR'
+                                                })]
+                                        });
 
-      it('collection', function() {
+                                        // when
+                                        var xml = writer.toXML(root);
 
-        // given
-        var writer = createWriter(model);
+                                        var expectedXml = '<e:root xmlns:e="http://extensions" ' + 'xmlns:e_1="http://not-extensions">' + '<e_1:foo foo="BAR" />' + '</e:root>';
 
-        var complexCount = model.create('props:ComplexCount', { id: 'ComplexCount_1' });
-        var complexNesting = model.create('props:ComplexNesting', { id: 'ComplexNesting_1' });
+                                        // then
+                                        (0, _expect2.default)(xml).to.eql(expectedXml);
+                                });
 
-        var referencingCollection = model.create('props:ReferencingCollection', {
-          references: [ complexCount, complexNesting ]
+                                it('on explicitly added namespace', function () {
+
+                                        // given
+                                        var writer = createWriter(extensionModel);
+
+                                        var root = extensionModel.create('e:Root', {
+                                                'xmlns:e': 'http://not-extensions'
+                                        });
+
+                                        // when
+                                        var xml = writer.toXML(root);
+
+                                        var expectedXml = '<e_1:root xmlns:e_1="http://extensions" ' + 'xmlns:e="http://not-extensions" />';
+
+                                        // then
+                                        (0, _expect2.default)(xml).to.eql(expectedXml);
+                                });
+
+                                it('on explicitly added namespace + Any', function () {
+
+                                        // given
+                                        var writer = createWriter(extensionModel);
+
+                                        var root = extensionModel.create('e:Root', {
+                                                'xmlns:e': 'http://not-extensions',
+                                                extensions: [extensionModel.createAny('e:foo', 'http://not-extensions', {
+                                                        foo: 'BAR'
+                                                })]
+                                        });
+
+                                        // when
+                                        var xml = writer.toXML(root);
+
+                                        var expectedXml = '<e_1:root xmlns:e_1="http://extensions" ' + 'xmlns:e="http://not-extensions">' + '<e:foo foo="BAR" />' + '</e_1:root>';
+
+                                        // then
+                                        (0, _expect2.default)(xml).to.eql(expectedXml);
+                                });
+                        });
+
+                        it('should write manually added custom namespace', function () {
+
+                                // given
+                                var writer = createWriter(extensionModel);
+
+                                var root = extensionModel.create('e:Root', {
+                                        'xmlns:foo': 'http://fooo'
+                                });
+
+                                // when
+                                var xml = writer.toXML(root);
+
+                                var expectedXml = '<e:root xmlns:e="http://extensions" ' + 'xmlns:foo="http://fooo" />';
+
+                                // then
+                                (0, _expect2.default)(xml).to.eql(expectedXml);
+                        });
+
+                        it('should ignore unknown namespace prefix', function () {
+
+                                // given
+                                var writer = createWriter(extensionModel);
+
+                                var root = extensionModel.create('e:Root', {
+                                        'foo:bar': 'BAR'
+                                });
+
+                                // when
+                                var xml = writer.toXML(root);
+
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<e:root xmlns:e="http://extensions" />');
+                        });
+                });
+
+                describe('elements', function () {
+
+                        it('should write self-closing extension elements', function () {
+
+                                // given
+                                var writer = createWriter(extensionModel);
+
+                                var meta1 = extensionModel.createAny('other:meta', 'http://other', {
+                                        key: 'FOO',
+                                        value: 'BAR'
+                                });
+
+                                var meta2 = extensionModel.createAny('other:meta', 'http://other', {
+                                        key: 'BAZ',
+                                        value: 'FOOBAR'
+                                });
+
+                                var root = extensionModel.create('e:Root', {
+                                        id: 'FOO',
+                                        extensions: [meta1, meta2]
+                                });
+
+                                // when
+                                var xml = writer.toXML(root);
+
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<e:root xmlns:e="http://extensions" xmlns:other="http://other">' + '<e:id>FOO</e:id>' + '<other:meta key="FOO" value="BAR" />' + '<other:meta key="BAZ" value="FOOBAR" />' + '</e:root>');
+                        });
+
+                        // #23
+                        it('should write unqualified element', function () {
+
+                                // given
+                                var writer = createWriter(extensionModel);
+
+                                // explicitly create element with elementForm=unqualified
+                                var root = extensionModel.createAny('root', undefined, {
+                                        key: 'FOO',
+                                        value: 'BAR'
+                                });
+
+                                // when
+                                var xml = writer.toXML(root);
+
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<root key="FOO" value="BAR" />');
+                        });
+
+                        it('should write extension element body', function () {
+
+                                // given
+                                var writer = createWriter(extensionModel);
+
+                                var note = extensionModel.createAny('other:note', 'http://other', {
+                                        $body: 'a note'
+                                });
+
+                                var root = extensionModel.create('e:Root', {
+                                        id: 'FOO',
+                                        extensions: [note]
+                                });
+
+                                // when
+                                var xml = writer.toXML(root);
+
+                                // then
+                                (0, _expect2.default)(xml).to.eql('<e:root xmlns:e="http://extensions" xmlns:other="http://other">' + '<e:id>FOO</e:id>' + '<other:note>' + 'a note' + '</other:note>' + '</e:root>');
+                        });
+
+                        it('should write nested extension element', function () {
+
+                                // given
+                                var writer = createWriter(extensionModel);
+
+                                var meta1 = extensionModel.createAny('other:meta', 'http://other', {
+                                        key: 'k1',
+                                        value: 'v1'
+                                });
+
+                                var meta2 = extensionModel.createAny('other:meta', 'http://other', {
+                                        key: 'k2',
+                                        value: 'v2'
+                                });
+
+                                var additionalNote = extensionModel.createAny('other:additionalNote', 'http://other', {
+                                        $body: 'this is some text'
+                                });
+
+                                var nestedMeta = extensionModel.createAny('other:nestedMeta', 'http://other', {
+                                        $children: [meta1, meta2, additionalNote]
+                                });
+
+                                var root = extensionModel.create('e:Root', {
+                                        id: 'FOO',
+                                        extensions: [nestedMeta]
+                                });
+
+                                // when
+                                var xml = writer.toXML(root);
+
+                                var expectedXml = '<e:root xmlns:e="http://extensions" xmlns:other="http://other">' + '<e:id>FOO</e:id>' + '<other:nestedMeta>' + '<other:meta key="k1" value="v1" />' + '<other:meta key="k2" value="v2" />' + '<other:additionalNote>' + 'this is some text' + '</other:additionalNote>' + '</other:nestedMeta>' + '</e:root>';
+
+                                // then
+                                (0, _expect2.default)(xml).to.eql(expectedXml);
+                        });
+                });
         });
 
-        // when
-        var xml = writer.toXML(referencingCollection);
+        describe('qualified extensions', function () {
 
-        // then
-        expect(xml).to.eql(
-          '<props:referencingCollection xmlns:props="http://properties">' +
-            '<props:references>ComplexCount_1</props:references>' +
-            '<props:references>ComplexNesting_1</props:references>' +
-          '</props:referencingCollection>');
-      });
+                var extensionModel = createModel(['extension/base', 'extension/custom']);
 
+                it('should write typed extension property', function () {
 
-      it('attribute collection', function() {
+                        // given
+                        var writer = createWriter(extensionModel);
 
-        // given
-        var writer = createWriter(model);
+                        var customGeneric = extensionModel.create('c:CustomGeneric', { count: 10 });
 
-        var complexCount = model.create('props:ComplexCount', { id: 'ComplexCount_1' });
-        var complexNesting = model.create('props:ComplexNesting', { id: 'ComplexNesting_1' });
+                        var root = extensionModel.create('b:Root', {
+                                generic: customGeneric
+                        });
 
-        var attrReferenceCollection = model.create('props:AttributeReferenceCollection', {
-          refs: [ complexCount, complexNesting ]
+                        // when
+                        var xml = writer.toXML(root);
+
+                        var expectedXml = '<b:Root xmlns:b="http://base" xmlns:c="http://custom">' + '<c:CustomGeneric count="10" />' + '</b:Root>';
+
+                        // then
+                        (0, _expect2.default)(xml).to.eql(expectedXml);
+                });
+
+                it('should write typed extension attribute', function () {
+
+                        // given
+                        var writer = createWriter(extensionModel);
+
+                        var root = extensionModel.create('b:Root', { customAttr: 666 });
+
+                        // when
+                        var xml = writer.toXML(root);
+
+                        var expectedXml = '<b:Root xmlns:b="http://base" xmlns:c="http://custom" c:customAttr="666" />';
+
+                        // then
+                        (0, _expect2.default)(xml).to.eql(expectedXml);
+                });
+
+                it('should write generic collection', function () {
+
+                        // given
+                        var writer = createWriter(extensionModel);
+
+                        var property1 = extensionModel.create('c:Property', { key: 'foo', value: 'FOO' });
+                        var property2 = extensionModel.create('c:Property', { key: 'bar', value: 'BAR' });
+
+                        var any = extensionModel.createAny('other:Xyz', 'http://other', {
+                                $body: 'content'
+                        });
+
+                        var root = extensionModel.create('b:Root', {
+                                genericCollection: [property1, property2, any]
+                        });
+
+                        var xml = writer.toXML(root);
+
+                        var expectedXml = '<b:Root xmlns:b="http://base" xmlns:c="http://custom" ' + 'xmlns:other="http://other">' + '<c:Property key="foo" value="FOO" />' + '<c:Property key="bar" value="BAR" />' + '<other:Xyz>content</other:Xyz>' + '</b:Root>';
+
+                        // then
+                        (0, _expect2.default)(xml).to.eql(expectedXml);
+                });
         });
 
-        // when
-        var xml = writer.toXML(attrReferenceCollection);
+        describe('local namespace declarations', function () {
 
-        // then
-        expect(xml).to.eql('<props:attributeReferenceCollection xmlns:props="http://properties" refs="ComplexCount_1 ComplexNesting_1" />');
-      });
+                it('should write custom', function () {
 
-    });
+                        var model = createModel(['extensions']);
 
+                        // given
+                        var writer = createWriter(model);
 
-    it('redefined properties', function() {
+                        var root = model.create('e:Root', {
+                                // unprefixed root namespace
+                                'xmlns': 'http://extensions',
+                                extensions: [model.createAny('bar:bar', 'http://bar', {
+                                        'xmlns:bar': 'http://bar',
+                                        $children: [model.createAny('other:child', 'http://other', {
+                                                'xmlns:other': 'http://other',
+                                                b: 'B'
+                                        })]
+                                }), model.createAny('ns0:foo', 'http://foo', {
+                                        // unprefixed extension namespace
+                                        'xmlns': 'http://foo',
+                                        $children: [model.createAny('ns0:child', 'http://foo', {
+                                                a: 'A'
+                                        })]
+                                })]
+                        });
 
-      // given
-      var model = createModel([ 'redefine' ]);
+                        // when
+                        var xml = writer.toXML(root);
 
-      var writer = createWriter(model);
+                        var expectedXml = '<root xmlns="http://extensions">' + '<bar:bar xmlns:bar="http://bar">' + '<other:child xmlns:other="http://other" b="B" />' + '</bar:bar>' + '<foo xmlns="http://foo">' + '<child a="A" />' + '</foo>' + '</root>';
 
-      var element = model.create('r:Extension', {
-        id: 1,
-        name: 'FOO',
-        value: 'BAR'
-      });
+                        // then
+                        (0, _expect2.default)(xml).to.eql(expectedXml);
+                });
 
-      var expectedXml = '<r:Extension xmlns:r="http://redefine">' +
-                          '<r:id>1</r:id>' +
-                          '<r:name>FOO</r:name>' +
-                          '<r:value>BAR</r:value>' +
-                        '</r:Extension>';
+                it('should write nested custom', function () {
 
-      // when
-      var xml = writer.toXML(element);
+                        var model = createModel(['extensions']);
 
-      // then
-      expect(xml).to.eql(expectedXml);
-    });
+                        // given
+                        var writer = createWriter(model);
 
+                        var root = model.create('e:Root', {
+                                // unprefixed root namespace
+                                'xmlns': 'http://extensions',
+                                extensions: [model.createAny('bar:bar', 'http://bar', {
+                                        'xmlns:bar': 'http://bar',
+                                        'bar:attr': 'ATTR'
+                                })]
+                        });
 
-    it('replaced properties', function() {
+                        // when
+                        var xml = writer.toXML(root);
 
-      // given
-      var model = createModel([ 'replace' ]);
+                        var expectedXml = '<root xmlns="http://extensions">' + '<bar:bar xmlns:bar="http://bar" attr="ATTR" />' + '</root>';
 
-      var writer = createWriter(model);
+                        // then
+                        (0, _expect2.default)(xml).to.eql(expectedXml);
+                });
 
-      var element = model.create('r:Extension', {
-        id: 1,
-        name: 'FOO',
-        value: 'BAR'
-      });
+                it('should strip redundant nested custom', function () {
 
-      var expectedXml = '<r:Extension xmlns:r="http://replace">' +
-                          '<r:name>FOO</r:name>' +
-                          '<r:value>BAR</r:value>' +
-                          '<r:id>1</r:id>' +
-                        '</r:Extension>';
+                        var model = createModel(['extensions']);
 
-      // when
-      var xml = writer.toXML(element);
+                        // given
+                        var writer = createWriter(model);
 
-      // then
-      expect(xml).to.eql(expectedXml);
-    });
+                        var root = model.create('e:Root', {
+                                // unprefixed root namespace
+                                'xmlns': 'http://extensions',
+                                'xmlns:bar': 'http://bar',
+                                extensions: [model.createAny('bar:bar', 'http://bar', {
+                                        'xmlns:bar': 'http://bar',
+                                        'bar:attr': 'ATTR'
+                                })]
+                        });
 
-  });
+                        // when
+                        var xml = writer.toXML(root);
 
+                        var expectedXml = '<root xmlns="http://extensions" xmlns:bar="http://bar">' + '<bar:bar attr="ATTR" />' + '</root>';
 
-  describe('extension handling', function() {
+                        // then
+                        (0, _expect2.default)(xml).to.eql(expectedXml);
+                });
 
-    var extensionModel = createModel([ 'extensions' ]);
+                it('should strip different prefix nested custom', function () {
 
+                        var model = createModel(['extensions']);
 
-    describe('attributes', function() {
+                        // given
+                        var writer = createWriter(model);
 
-      it('should write xsi:schemaLocation', function() {
+                        var root = model.create('e:Root', {
+                                // unprefixed root namespace
+                                'xmlns': 'http://extensions',
+                                'xmlns:otherBar': 'http://bar',
+                                'xmlns:otherFoo': 'http://foo',
+                                extensions: [model.createAny('bar:bar', 'http://bar', {
+                                        'xmlns:bar': 'http://bar',
+                                        'xmlns:foo': 'http://foo',
+                                        'bar:attr': 'ATTR',
+                                        'foo:attr': 'FOO_ATTR'
+                                })]
+                        });
 
-        // given
-        var writer = createWriter(extensionModel);
+                        // when
+                        var xml = writer.toXML(root);
 
-        var root = extensionModel.create('e:Root', {
-          'xsi:schemaLocation': 'http://fooo ./foo.xsd'
+                        var expectedXml = '<root xmlns="http://extensions" xmlns:otherBar="http://bar" ' + 'xmlns:otherFoo="http://foo">' + '<otherBar:bar attr="ATTR" otherFoo:attr="FOO_ATTR" />' + '</root>';
+
+                        // then
+                        (0, _expect2.default)(xml).to.eql(expectedXml);
+                });
+
+                it('should write normalized custom', function () {
+
+                        var model = createModel(['extensions']);
+
+                        // given
+                        var writer = createWriter(model);
+
+                        var root = model.create('e:Root', {
+                                // unprefixed root namespace
+                                'xmlns': 'http://extensions',
+                                'xmlns:otherBar': 'http://bar',
+                                extensions: [model.createAny('bar:bar', 'http://bar', {
+                                        'bar:attr': 'ATTR'
+                                })]
+                        });
+
+                        // when
+                        var xml = writer.toXML(root);
+
+                        var expectedXml = '<root xmlns="http://extensions" xmlns:otherBar="http://bar">' + '<otherBar:bar attr="ATTR" />' + '</root>';
+
+                        // then
+                        (0, _expect2.default)(xml).to.eql(expectedXml);
+                });
+
+                it('should write wellknown', function () {
+
+                        var model = createModel(['properties', 'properties-extended']);
+
+                        // given
+                        var writer = createWriter(model);
+
+                        var root = model.create('props:Root', {
+                                // unprefixed top-level namespace
+                                'xmlns': 'http://properties',
+                                any: [model.create('ext:ExtendedComplex', {
+                                        // unprefixed nested namespace
+                                        'xmlns': 'http://extended'
+                                })]
+                        });
+
+                        // when
+                        var xml = writer.toXML(root);
+
+                        var expectedXml = '<root xmlns="http://properties">' + '<extendedComplex xmlns="http://extended" />' + '</root>';
+
+                        // then
+                        (0, _expect2.default)(xml).to.eql(expectedXml);
+                });
+
+                it('should write only actually exposed', function () {
+
+                        var model = createModel(['properties', 'properties-extended']);
+
+                        // given
+                        var writer = createWriter(model);
+
+                        var root = model.create('ext:Root', {
+                                // unprefixed top-level namespace
+                                'xmlns': 'http://extended',
+                                id: 'ROOT',
+                                any: [model.create('props:Complex', {
+                                        // unprefixed nested namespace
+                                        'xmlns': 'http://properties'
+                                })]
+                        });
+
+                        // when
+                        var xml = writer.toXML(root);
+
+                        var expectedXml = '<root xmlns="http://extended" id="ROOT">' + '<complex xmlns="http://properties" />' + '</root>';
+
+                        // then
+                        (0, _expect2.default)(xml).to.eql(expectedXml);
+                });
+
+                it('should write xsi:type namespaces', function () {
+
+                        var model = createModel(['datatype', 'datatype-external', 'datatype-aliased']);
+
+                        // given
+                        var writer = createWriter(model);
+
+                        var root = model.create('da:Root', {
+                                'xmlns:a': 'http://datatypes-aliased',
+                                otherBounds: [model.create('dt:Rect', {
+                                        'xmlns': 'http://datatypes',
+                                        y: 100
+                                })]
+                        });
+
+                        // when
+                        var xml = writer.toXML(root);
+
+                        // then
+                        (0, _expect2.default)(xml).to.eql('<a:Root xmlns:a="http://datatypes-aliased">' + '<otherBounds xmlns="http://datatypes" y="100" />' + '</a:Root>');
+                });
         });
-
-        // when
-        var xml = writer.toXML(root);
-
-        var expectedXml =
-          '<e:root xmlns:e="http://extensions" ' +
-                  'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' +
-                  'xsi:schemaLocation="http://fooo ./foo.xsd" />';
-
-        // then
-        expect(xml).to.eql(expectedXml);
-      });
-
-
-      it('should write extension attributes', function() {
-
-        // given
-        var writer = createWriter(extensionModel);
-
-        var root = extensionModel.create('e:Root', {
-          'xmlns:foo': 'http://fooo',
-          'foo:bar': 'BAR'
-        });
-
-        // when
-        var xml = writer.toXML(root);
-
-        // then
-        expect(xml).to.eql('<e:root xmlns:e="http://extensions" xmlns:foo="http://fooo" foo:bar="BAR" />');
-      });
-
-
-      describe('should deconflict namespace prefixes', function() {
-
-        it('on nested Any', function() {
-
-          // given
-          var writer = createWriter(extensionModel);
-
-          var root = extensionModel.create('e:Root', {
-            extensions: [
-              extensionModel.createAny('e:foo', 'http://not-extensions', {
-                foo: 'BAR'
-              })
-            ]
-          });
-
-          // when
-          var xml = writer.toXML(root);
-
-          var expectedXml =
-            '<e:root xmlns:e="http://extensions" ' +
-                      'xmlns:e_1="http://not-extensions">' +
-              '<e_1:foo foo="BAR" />' +
-            '</e:root>';
-
-          // then
-          expect(xml).to.eql(expectedXml);
-        });
-
-
-        it('on explicitly added namespace', function() {
-
-          // given
-          var writer = createWriter(extensionModel);
-
-          var root = extensionModel.create('e:Root', {
-            'xmlns:e': 'http://not-extensions'
-          });
-
-          // when
-          var xml = writer.toXML(root);
-
-          var expectedXml =
-            '<e_1:root xmlns:e_1="http://extensions" ' +
-                      'xmlns:e="http://not-extensions" />';
-
-          // then
-          expect(xml).to.eql(expectedXml);
-        });
-
-
-        it('on explicitly added namespace + Any', function() {
-
-          // given
-          var writer = createWriter(extensionModel);
-
-          var root = extensionModel.create('e:Root', {
-            'xmlns:e': 'http://not-extensions',
-            extensions: [
-              extensionModel.createAny('e:foo', 'http://not-extensions', {
-                foo: 'BAR'
-              })
-            ]
-          });
-
-          // when
-          var xml = writer.toXML(root);
-
-          var expectedXml =
-            '<e_1:root xmlns:e_1="http://extensions" ' +
-                      'xmlns:e="http://not-extensions">' +
-              '<e:foo foo="BAR" />' +
-            '</e_1:root>';
-
-          // then
-          expect(xml).to.eql(expectedXml);
-        });
-
-      });
-
-
-      it('should write manually added custom namespace', function() {
-
-        // given
-        var writer = createWriter(extensionModel);
-
-        var root = extensionModel.create('e:Root', {
-          'xmlns:foo': 'http://fooo'
-        });
-
-        // when
-        var xml = writer.toXML(root);
-
-        var expectedXml =
-          '<e:root xmlns:e="http://extensions" ' +
-                  'xmlns:foo="http://fooo" />';
-
-        // then
-        expect(xml).to.eql(expectedXml);
-      });
-
-
-      it('should ignore unknown namespace prefix', function() {
-
-        // given
-        var writer = createWriter(extensionModel);
-
-        var root = extensionModel.create('e:Root', {
-          'foo:bar': 'BAR'
-        });
-
-        // when
-        var xml = writer.toXML(root);
-
-        // then
-        expect(xml).to.eql('<e:root xmlns:e="http://extensions" />');
-      });
-
-    });
-
-
-    describe('elements', function() {
-
-      it('should write self-closing extension elements', function() {
-
-        // given
-        var writer = createWriter(extensionModel);
-
-        var meta1 = extensionModel.createAny('other:meta', 'http://other', {
-          key: 'FOO',
-          value: 'BAR'
-        });
-
-        var meta2 = extensionModel.createAny('other:meta', 'http://other', {
-          key: 'BAZ',
-          value: 'FOOBAR'
-        });
-
-        var root = extensionModel.create('e:Root', {
-          id: 'FOO',
-          extensions: [ meta1, meta2 ]
-        });
-
-        // when
-        var xml = writer.toXML(root);
-
-        // then
-        expect(xml).to.eql(
-          '<e:root xmlns:e="http://extensions" xmlns:other="http://other">' +
-            '<e:id>FOO</e:id>' +
-            '<other:meta key="FOO" value="BAR" />' +
-            '<other:meta key="BAZ" value="FOOBAR" />' +
-          '</e:root>');
-      });
-
-
-      // #23
-      it('should write unqualified element', function() {
-
-        // given
-        var writer = createWriter(extensionModel);
-
-        // explicitly create element with elementForm=unqualified
-        var root = extensionModel.createAny('root', undefined, {
-          key: 'FOO',
-          value: 'BAR'
-        });
-
-        // when
-        var xml = writer.toXML(root);
-
-        // then
-        expect(xml).to.eql(
-          '<root key="FOO" value="BAR" />'
-        );
-      });
-
-
-      it('should write extension element body', function() {
-
-        // given
-        var writer = createWriter(extensionModel);
-
-        var note = extensionModel.createAny('other:note', 'http://other', {
-          $body: 'a note'
-        });
-
-        var root = extensionModel.create('e:Root', {
-          id: 'FOO',
-          extensions: [ note ]
-        });
-
-        // when
-        var xml = writer.toXML(root);
-
-        // then
-        expect(xml).to.eql(
-          '<e:root xmlns:e="http://extensions" xmlns:other="http://other">' +
-            '<e:id>FOO</e:id>' +
-            '<other:note>' +
-              'a note' +
-            '</other:note>' +
-          '</e:root>');
-      });
-
-
-      it('should write nested extension element', function() {
-
-        // given
-        var writer = createWriter(extensionModel);
-
-        var meta1 = extensionModel.createAny('other:meta', 'http://other', {
-          key: 'k1',
-          value: 'v1'
-        });
-
-        var meta2 = extensionModel.createAny('other:meta', 'http://other', {
-          key: 'k2',
-          value: 'v2'
-        });
-
-        var additionalNote = extensionModel.createAny('other:additionalNote', 'http://other', {
-          $body: 'this is some text'
-        });
-
-        var nestedMeta = extensionModel.createAny('other:nestedMeta', 'http://other', {
-          $children: [ meta1, meta2, additionalNote ]
-        });
-
-        var root = extensionModel.create('e:Root', {
-          id: 'FOO',
-          extensions: [ nestedMeta ]
-        });
-
-        // when
-        var xml = writer.toXML(root);
-
-        var expectedXml =
-          '<e:root xmlns:e="http://extensions" xmlns:other="http://other">' +
-            '<e:id>FOO</e:id>' +
-            '<other:nestedMeta>' +
-              '<other:meta key="k1" value="v1" />' +
-              '<other:meta key="k2" value="v2" />' +
-              '<other:additionalNote>' +
-                'this is some text' +
-              '</other:additionalNote>' +
-            '</other:nestedMeta>' +
-          '</e:root>';
-
-        // then
-        expect(xml).to.eql(expectedXml);
-      });
-    });
-
-  });
-
-
-  describe('qualified extensions', function() {
-
-    var extensionModel = createModel([ 'extension/base', 'extension/custom' ]);
-
-
-    it('should write typed extension property', function() {
-
-      // given
-      var writer = createWriter(extensionModel);
-
-      var customGeneric = extensionModel.create('c:CustomGeneric', { count: 10 });
-
-      var root = extensionModel.create('b:Root', {
-        generic: customGeneric
-      });
-
-      // when
-      var xml = writer.toXML(root);
-
-      var expectedXml =
-        '<b:Root xmlns:b="http://base" xmlns:c="http://custom">' +
-          '<c:CustomGeneric count="10" />' +
-        '</b:Root>';
-
-      // then
-      expect(xml).to.eql(expectedXml);
-    });
-
-
-    it('should write typed extension attribute', function() {
-
-      // given
-      var writer = createWriter(extensionModel);
-
-      var root = extensionModel.create('b:Root', { customAttr: 666 });
-
-      // when
-      var xml = writer.toXML(root);
-
-      var expectedXml =
-        '<b:Root xmlns:b="http://base" xmlns:c="http://custom" c:customAttr="666" />';
-
-      // then
-      expect(xml).to.eql(expectedXml);
-    });
-
-
-    it('should write generic collection', function() {
-
-      // given
-      var writer = createWriter(extensionModel);
-
-      var property1 = extensionModel.create('c:Property', { key: 'foo', value: 'FOO' });
-      var property2 = extensionModel.create('c:Property', { key: 'bar', value: 'BAR' });
-
-      var any = extensionModel.createAny('other:Xyz', 'http://other', {
-        $body: 'content'
-      });
-
-      var root = extensionModel.create('b:Root', {
-        genericCollection: [ property1, property2, any ]
-      });
-
-      var xml = writer.toXML(root);
-
-      var expectedXml =
-        '<b:Root xmlns:b="http://base" xmlns:c="http://custom" ' +
-                'xmlns:other="http://other">' +
-          '<c:Property key="foo" value="FOO" />' +
-          '<c:Property key="bar" value="BAR" />' +
-          '<other:Xyz>content</other:Xyz>' +
-        '</b:Root>';
-
-      // then
-      expect(xml).to.eql(expectedXml);
-
-    });
-
-  });
-
-
-  describe('local namespace declarations', function() {
-
-    it('should write custom', function() {
-
-      var model = createModel([ 'extensions' ]);
-
-      // given
-      var writer = createWriter(model);
-
-      var root = model.create('e:Root', {
-        // unprefixed root namespace
-        'xmlns': 'http://extensions',
-        extensions: [
-          model.createAny('bar:bar', 'http://bar', {
-            'xmlns:bar': 'http://bar',
-            $children: [
-              model.createAny('other:child', 'http://other', {
-                'xmlns:other': 'http://other',
-                b: 'B'
-              })
-            ]
-          }),
-          model.createAny('ns0:foo', 'http://foo', {
-            // unprefixed extension namespace
-            'xmlns': 'http://foo',
-            $children: [
-              model.createAny('ns0:child', 'http://foo', {
-                a: 'A'
-              })
-            ]
-          })
-        ]
-      });
-
-      // when
-      var xml = writer.toXML(root);
-
-      var expectedXml =
-        '<root xmlns="http://extensions">' +
-          '<bar:bar xmlns:bar="http://bar">' +
-            '<other:child xmlns:other="http://other" b="B" />' +
-          '</bar:bar>' +
-          '<foo xmlns="http://foo">' +
-            '<child a="A" />' +
-          '</foo>' +
-        '</root>';
-
-      // then
-      expect(xml).to.eql(expectedXml);
-
-    });
-
-
-    it('should write nested custom', function() {
-
-      var model = createModel([ 'extensions' ]);
-
-      // given
-      var writer = createWriter(model);
-
-      var root = model.create('e:Root', {
-        // unprefixed root namespace
-        'xmlns': 'http://extensions',
-        extensions: [
-          model.createAny('bar:bar', 'http://bar', {
-            'xmlns:bar': 'http://bar',
-            'bar:attr': 'ATTR'
-          })
-        ]
-      });
-
-      // when
-      var xml = writer.toXML(root);
-
-      var expectedXml =
-        '<root xmlns="http://extensions">' +
-          '<bar:bar xmlns:bar="http://bar" attr="ATTR" />' +
-        '</root>';
-
-      // then
-      expect(xml).to.eql(expectedXml);
-    });
-
-
-    it('should strip redundant nested custom', function() {
-
-      var model = createModel([ 'extensions' ]);
-
-      // given
-      var writer = createWriter(model);
-
-      var root = model.create('e:Root', {
-        // unprefixed root namespace
-        'xmlns': 'http://extensions',
-        'xmlns:bar': 'http://bar',
-        extensions: [
-          model.createAny('bar:bar', 'http://bar', {
-            'xmlns:bar': 'http://bar',
-            'bar:attr': 'ATTR'
-          })
-        ]
-      });
-
-      // when
-      var xml = writer.toXML(root);
-
-      var expectedXml =
-        '<root xmlns="http://extensions" xmlns:bar="http://bar">' +
-          '<bar:bar attr="ATTR" />' +
-        '</root>';
-
-      // then
-      expect(xml).to.eql(expectedXml);
-    });
-
-
-    it('should strip different prefix nested custom', function() {
-
-      var model = createModel([ 'extensions' ]);
-
-      // given
-      var writer = createWriter(model);
-
-      var root = model.create('e:Root', {
-        // unprefixed root namespace
-        'xmlns': 'http://extensions',
-        'xmlns:otherBar': 'http://bar',
-        'xmlns:otherFoo': 'http://foo',
-        extensions: [
-          model.createAny('bar:bar', 'http://bar', {
-            'xmlns:bar': 'http://bar',
-            'xmlns:foo': 'http://foo',
-            'bar:attr': 'ATTR',
-            'foo:attr': 'FOO_ATTR'
-          })
-        ]
-      });
-
-      // when
-      var xml = writer.toXML(root);
-
-      var expectedXml =
-        '<root xmlns="http://extensions" xmlns:otherBar="http://bar" ' +
-              'xmlns:otherFoo="http://foo">' +
-          '<otherBar:bar attr="ATTR" otherFoo:attr="FOO_ATTR" />' +
-        '</root>';
-
-      // then
-      expect(xml).to.eql(expectedXml);
-    });
-
-
-    it('should write normalized custom', function() {
-
-      var model = createModel([ 'extensions' ]);
-
-      // given
-      var writer = createWriter(model);
-
-      var root = model.create('e:Root', {
-        // unprefixed root namespace
-        'xmlns': 'http://extensions',
-        'xmlns:otherBar': 'http://bar',
-        extensions: [
-          model.createAny('bar:bar', 'http://bar', {
-            'bar:attr': 'ATTR'
-          })
-        ]
-      });
-
-      // when
-      var xml = writer.toXML(root);
-
-      var expectedXml =
-        '<root xmlns="http://extensions" xmlns:otherBar="http://bar">' +
-          '<otherBar:bar attr="ATTR" />' +
-        '</root>';
-
-      // then
-      expect(xml).to.eql(expectedXml);
-    });
-
-
-    it('should write wellknown', function() {
-
-      var model = createModel([
-        'properties',
-        'properties-extended'
-      ]);
-
-      // given
-      var writer = createWriter(model);
-
-      var root = model.create('props:Root', {
-        // unprefixed top-level namespace
-        'xmlns': 'http://properties',
-        any: [
-          model.create('ext:ExtendedComplex', {
-            // unprefixed nested namespace
-            'xmlns': 'http://extended'
-          })
-        ]
-      });
-
-      // when
-      var xml = writer.toXML(root);
-
-      var expectedXml =
-        '<root xmlns="http://properties">' +
-          '<extendedComplex xmlns="http://extended" />' +
-        '</root>';
-
-      // then
-      expect(xml).to.eql(expectedXml);
-
-    });
-
-
-    it('should write only actually exposed', function() {
-
-      var model = createModel([
-        'properties',
-        'properties-extended'
-      ]);
-
-      // given
-      var writer = createWriter(model);
-
-      var root = model.create('ext:Root', {
-        // unprefixed top-level namespace
-        'xmlns': 'http://extended',
-        id: 'ROOT',
-        any: [
-          model.create('props:Complex', {
-            // unprefixed nested namespace
-            'xmlns': 'http://properties'
-          })
-        ]
-      });
-
-      // when
-      var xml = writer.toXML(root);
-
-      var expectedXml =
-        '<root xmlns="http://extended" id="ROOT">' +
-          '<complex xmlns="http://properties" />' +
-        '</root>';
-
-      // then
-      expect(xml).to.eql(expectedXml);
-
-    });
-
-
-    it('should write xsi:type namespaces', function() {
-
-      var model = createModel([
-        'datatype',
-        'datatype-external',
-        'datatype-aliased'
-      ]);
-
-      // given
-      var writer = createWriter(model);
-
-      var root = model.create('da:Root', {
-        'xmlns:a' : 'http://datatypes-aliased',
-        otherBounds: [
-          model.create('dt:Rect', {
-            'xmlns': 'http://datatypes',
-            y: 100
-          })
-        ]
-      });
-
-      // when
-      var xml = writer.toXML(root);
-
-      // then
-      expect(xml).to.eql(
-        '<a:Root xmlns:a="http://datatypes-aliased">' +
-          '<otherBounds xmlns="http://datatypes" y="100" />' +
-        '</a:Root>');
-
-    });
-
-  });
-
 });

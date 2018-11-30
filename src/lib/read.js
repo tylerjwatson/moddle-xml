@@ -1,31 +1,31 @@
-'use strict';
+import {
+  forEach,
+  find,
+  assign
+} from 'min-dash';
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.Context = Context;
-exports.ElementHandler = ElementHandler;
-exports.Reader = Reader;
+import Stack from 'tiny-stack';
 
-var _minDash = require('min-dash');
+import {
+  Parser as SaxParser
+} from 'saxen';
 
-var _tinyStack = require('tiny-stack');
+import Moddle from 'moddle';
+import {
+  parseName as parseNameNs
+} from 'moddle/lib/ns';
 
-var _tinyStack2 = _interopRequireDefault(_tinyStack);
+import {
+  coerceType,
+  isSimple as isSimpleType
+} from 'moddle/lib/types';
 
-var _saxen = require('saxen');
+import {
+  XSI_TYPE,
+  serializeAsType,
+  hasLowerCaseAlias
+} from './common';
 
-var _moddle = require('moddle');
-
-var _moddle2 = _interopRequireDefault(_moddle);
-
-var _ns = require('moddle/lib/ns');
-
-var _types = require('moddle/lib/types');
-
-var _common = require('./common');
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
@@ -33,7 +33,7 @@ function capitalize(str) {
 
 function aliasToName(aliasNs, pkg) {
 
-  if (!(0, _common.hasLowerCaseAlias)(pkg)) {
+  if (!hasLowerCaseAlias(pkg)) {
     return aliasNs.name;
   }
 
@@ -56,7 +56,7 @@ function prefixedToName(nameNs, pkg) {
 
 function normalizeXsiTypeName(name, model) {
 
-  var nameNs = (0, _ns.parseName)(name);
+  var nameNs = parseNameNs(name);
   var pkg = model.getPackage(nameNs.prefix);
 
   return prefixedToName(nameNs, pkg);
@@ -90,7 +90,7 @@ function defer(fn) {
  * @param {ElementHandler} options.rootHandler the root handler for parsing a document
  * @param {boolean} [options.lax=false] whether or not to ignore invalid elements
  */
-function Context(options) {
+export function Context(options) {
 
   /**
    * @property {ElementHandler} rootHandler
@@ -100,7 +100,7 @@ function Context(options) {
    * @property {Boolean} lax
    */
 
-  (0, _minDash.assign)(this, options);
+  assign(this, options);
 
   this.elementsById = {};
   this.references = [];
@@ -111,7 +111,7 @@ function Context(options) {
    *
    * @param {Object} reference
    */
-  this.addReference = function (reference) {
+  this.addReference = function(reference) {
     this.references.push(reference);
   };
 
@@ -120,7 +120,7 @@ function Context(options) {
    *
    * @param {ModdleElement} element
    */
-  this.addElement = function (element) {
+  this.addElement = function(element) {
 
     if (!element) {
       throw error('expected element');
@@ -154,16 +154,17 @@ function Context(options) {
    * @param {String} warning.message
    * @param {Error} [warning.error]
    */
-  this.addWarning = function (warning) {
+  this.addWarning = function(warning) {
     this.warnings.push(warning);
   };
 }
 
 function BaseHandler() {}
 
-BaseHandler.prototype.handleEnd = function () {};
-BaseHandler.prototype.handleText = function () {};
-BaseHandler.prototype.handleNode = function () {};
+BaseHandler.prototype.handleEnd = function() {};
+BaseHandler.prototype.handleText = function() {};
+BaseHandler.prototype.handleNode = function() {};
+
 
 /**
  * A simple pass through handler that does nothing except for
@@ -172,11 +173,11 @@ BaseHandler.prototype.handleNode = function () {};
  * This is used to ignore unknown elements and
  * attributes.
  */
-function NoopHandler() {}
+function NoopHandler() { }
 
 NoopHandler.prototype = Object.create(BaseHandler.prototype);
 
-NoopHandler.prototype.handleNode = function () {
+NoopHandler.prototype.handleNode = function() {
   return this;
 };
 
@@ -184,7 +185,7 @@ function BodyHandler() {}
 
 BodyHandler.prototype = Object.create(BaseHandler.prototype);
 
-BodyHandler.prototype.handleText = function (text) {
+BodyHandler.prototype.handleText = function(text) {
   this.body = (this.body || '') + text;
 };
 
@@ -195,7 +196,7 @@ function ReferenceHandler(property, context) {
 
 ReferenceHandler.prototype = Object.create(BodyHandler.prototype);
 
-ReferenceHandler.prototype.handleNode = function (node) {
+ReferenceHandler.prototype.handleNode = function(node) {
 
   if (this.element) {
     throw error('expected no sub nodes');
@@ -206,11 +207,11 @@ ReferenceHandler.prototype.handleNode = function (node) {
   return this;
 };
 
-ReferenceHandler.prototype.handleEnd = function () {
+ReferenceHandler.prototype.handleEnd = function() {
   this.element.id = this.body;
 };
 
-ReferenceHandler.prototype.createReference = function (node) {
+ReferenceHandler.prototype.createReference = function(node) {
   return {
     property: this.property.ns.name,
     id: ''
@@ -224,13 +225,13 @@ function ValueHandler(propertyDesc, element) {
 
 ValueHandler.prototype = Object.create(BodyHandler.prototype);
 
-ValueHandler.prototype.handleEnd = function () {
+ValueHandler.prototype.handleEnd = function() {
 
   var value = this.body || '',
       element = this.element,
       propertyDesc = this.propertyDesc;
 
-  value = (0, _types.coerceType)(propertyDesc.type, value);
+  value = coerceType(propertyDesc.type, value);
 
   if (propertyDesc.isMany) {
     element.get(propertyDesc.name).push(value);
@@ -239,11 +240,12 @@ ValueHandler.prototype.handleEnd = function () {
   }
 };
 
+
 function BaseElementHandler() {}
 
 BaseElementHandler.prototype = Object.create(BodyHandler.prototype);
 
-BaseElementHandler.prototype.handleNode = function (node) {
+BaseElementHandler.prototype.handleNode = function(node) {
   var parser = this,
       element = this.element;
 
@@ -262,7 +264,7 @@ BaseElementHandler.prototype.handleNode = function (node) {
  * @class Reader.ElementHandler
  *
  */
-function ElementHandler(model, typeName, context) {
+export function ElementHandler(model, typeName, context) {
   this.model = model;
   this.type = model.getType(typeName);
   this.context = context;
@@ -270,11 +272,11 @@ function ElementHandler(model, typeName, context) {
 
 ElementHandler.prototype = Object.create(BaseElementHandler.prototype);
 
-ElementHandler.prototype.addReference = function (reference) {
+ElementHandler.prototype.addReference = function(reference) {
   this.context.addReference(reference);
 };
 
-ElementHandler.prototype.handleText = function (text) {
+ElementHandler.prototype.handleText = function(text) {
 
   var element = this.element,
       descriptor = getModdleDescriptor(element),
@@ -287,7 +289,7 @@ ElementHandler.prototype.handleText = function (text) {
   BodyHandler.prototype.handleText.call(this, text);
 };
 
-ElementHandler.prototype.handleEnd = function () {
+ElementHandler.prototype.handleEnd = function() {
 
   var value = this.body,
       element = this.element,
@@ -295,7 +297,7 @@ ElementHandler.prototype.handleEnd = function () {
       bodyProperty = descriptor.bodyProperty;
 
   if (bodyProperty && value !== undefined) {
-    value = (0, _types.coerceType)(bodyProperty.type, value);
+    value = coerceType(bodyProperty.type, value);
     element.set(bodyProperty.name, value);
   }
 };
@@ -305,7 +307,7 @@ ElementHandler.prototype.handleEnd = function () {
  *
  * @param  {Element} node the xml node
  */
-ElementHandler.prototype.createElement = function (node) {
+ElementHandler.prototype.createElement = function(node) {
   var attributes = node.attributes,
       Type = this.type,
       descriptor = getModdleDescriptor(Type),
@@ -314,7 +316,7 @@ ElementHandler.prototype.createElement = function (node) {
       model = this.model,
       propNameNs;
 
-  (0, _minDash.forEach)(attributes, function (value, name) {
+  forEach(attributes, function(value, name) {
 
     var prop = descriptor.propertiesByName[name],
         values;
@@ -331,7 +333,7 @@ ElementHandler.prototype.createElement = function (node) {
         // IDREFS: parse references as whitespace-separated list
         values = value.split(' ');
 
-        (0, _minDash.forEach)(values, function (v) {
+        forEach(values, function(v) {
           context.addReference({
             element: instance,
             property: prop.ns.name,
@@ -339,11 +341,13 @@ ElementHandler.prototype.createElement = function (node) {
           });
         });
       }
+
     } else {
       if (prop) {
-        value = (0, _types.coerceType)(prop.type, value);
-      } else if (name !== 'xmlns') {
-        propNameNs = (0, _ns.parseName)(name, descriptor.ns.prefix);
+        value = coerceType(prop.type, value);
+      } else
+      if (name !== 'xmlns') {
+        propNameNs = parseNameNs(name, descriptor.ns.prefix);
 
         // check whether attribute is defined in a well-known namespace
         // if that is the case we emit a warning to indicate potential misuse
@@ -365,10 +369,10 @@ ElementHandler.prototype.createElement = function (node) {
   return instance;
 };
 
-ElementHandler.prototype.getPropertyForNode = function (node) {
+ElementHandler.prototype.getPropertyForNode = function(node) {
 
   var name = node.name;
-  var nameNs = (0, _ns.parseName)(name);
+  var nameNs = parseNameNs(name);
 
   var type = this.type,
       model = this.model,
@@ -383,8 +387,8 @@ ElementHandler.prototype.getPropertyForNode = function (node) {
 
   if (property) {
 
-    if ((0, _common.serializeAsType)(property)) {
-      elementTypeName = node.attributes[_common.XSI_TYPE];
+    if (serializeAsType(property)) {
+      elementTypeName = node.attributes[XSI_TYPE];
 
       // xsi type is optional, if it does not exists the
       // default type is assumed
@@ -396,7 +400,7 @@ ElementHandler.prototype.getPropertyForNode = function (node) {
 
         elementType = model.getType(elementTypeName);
 
-        return (0, _minDash.assign)({}, property, {
+        return assign({}, property, {
           effectiveType: getModdleDescriptor(elementType).name
         });
       }
@@ -413,18 +417,18 @@ ElementHandler.prototype.getPropertyForNode = function (node) {
     elementType = model.getType(elementTypeName);
 
     // search for collection members later
-    property = (0, _minDash.find)(descriptor.properties, function (p) {
+    property = find(descriptor.properties, function(p) {
       return !p.isVirtual && !p.isReference && !p.isAttribute && elementType.hasType(p.type);
     });
 
     if (property) {
-      return (0, _minDash.assign)({}, property, {
+      return assign({}, property, {
         effectiveType: getModdleDescriptor(elementType).name
       });
     }
   } else {
     // parse unknown element (maybe extension)
-    property = (0, _minDash.find)(descriptor.properties, function (p) {
+    property = find(descriptor.properties, function(p) {
       return !p.isReference && !p.isAttribute && p.type === 'Element';
     });
 
@@ -436,19 +440,19 @@ ElementHandler.prototype.getPropertyForNode = function (node) {
   throw error('unrecognized element <' + nameNs.name + '>');
 };
 
-ElementHandler.prototype.toString = function () {
+ElementHandler.prototype.toString = function() {
   return 'ElementDescriptor[' + getModdleDescriptor(this.type).name + ']';
 };
 
-ElementHandler.prototype.valueHandler = function (propertyDesc, element) {
+ElementHandler.prototype.valueHandler = function(propertyDesc, element) {
   return new ValueHandler(propertyDesc, element);
 };
 
-ElementHandler.prototype.referenceHandler = function (propertyDesc) {
+ElementHandler.prototype.referenceHandler = function(propertyDesc) {
   return new ReferenceHandler(propertyDesc, this.context);
 };
 
-ElementHandler.prototype.handler = function (type) {
+ElementHandler.prototype.handler = function(type) {
   if (type === 'Element') {
     return new GenericElementHandler(this.model, type, this.context);
   } else {
@@ -461,7 +465,7 @@ ElementHandler.prototype.handler = function (type) {
  *
  * @param  {Element} node the xml node
  */
-ElementHandler.prototype.handleChild = function (node) {
+ElementHandler.prototype.handleChild = function(node) {
   var propertyDesc, type, element, childHandler;
 
   propertyDesc = this.getPropertyForNode(node);
@@ -469,7 +473,7 @@ ElementHandler.prototype.handleChild = function (node) {
 
   type = propertyDesc.effectiveType || propertyDesc.type;
 
-  if ((0, _types.isSimple)(type)) {
+  if (isSimpleType(type)) {
     return this.valueHandler(propertyDesc, element);
   }
 
@@ -492,7 +496,7 @@ ElementHandler.prototype.handleChild = function (node) {
     }
 
     if (propertyDesc.isReference) {
-      (0, _minDash.assign)(newElement, {
+      assign(newElement, {
         element: element
       });
 
@@ -521,10 +525,10 @@ function RootElementHandler(model, typeName, context) {
 
 RootElementHandler.prototype = Object.create(ElementHandler.prototype);
 
-RootElementHandler.prototype.createElement = function (node) {
+RootElementHandler.prototype.createElement = function(node) {
 
   var name = node.name,
-      nameNs = (0, _ns.parseName)(name),
+      nameNs = parseNameNs(name),
       model = this.model,
       type = this.type,
       pkg = model.getPackage(nameNs.prefix),
@@ -541,6 +545,7 @@ RootElementHandler.prototype.createElement = function (node) {
   return ElementHandler.prototype.createElement.call(this, node);
 };
 
+
 function GenericElementHandler(model, typeName, context) {
   this.model = model;
   this.context = context;
@@ -548,10 +553,10 @@ function GenericElementHandler(model, typeName, context) {
 
 GenericElementHandler.prototype = Object.create(BaseElementHandler.prototype);
 
-GenericElementHandler.prototype.createElement = function (node) {
+GenericElementHandler.prototype.createElement = function(node) {
 
   var name = node.name,
-      ns = (0, _ns.parseName)(name),
+      ns = parseNameNs(name),
       prefix = ns.prefix,
       uri = node.ns[prefix + '$uri'],
       attributes = node.attributes;
@@ -559,7 +564,7 @@ GenericElementHandler.prototype.createElement = function (node) {
   return this.model.createAny(name, uri, attributes);
 };
 
-GenericElementHandler.prototype.handleChild = function (node) {
+GenericElementHandler.prototype.handleChild = function(node) {
 
   var handler = new GenericElementHandler(this.model, 'Element', this.context).handleNode(node),
       element = this.element;
@@ -578,7 +583,7 @@ GenericElementHandler.prototype.handleChild = function (node) {
   return handler;
 };
 
-GenericElementHandler.prototype.handleEnd = function () {
+GenericElementHandler.prototype.handleEnd = function() {
   if (this.body) {
     this.element.$body = this.body;
   }
@@ -591,16 +596,17 @@ GenericElementHandler.prototype.handleEnd = function () {
  * @param {Model} options.model used to read xml files
  * @param {Boolean} options.lax whether to make parse errors warnings
  */
-function Reader(options) {
+export function Reader(options) {
 
-  if (options instanceof _moddle2.default) {
+  if (options instanceof Moddle) {
     options = {
       model: options
     };
   }
 
-  (0, _minDash.assign)(this, { lax: false }, options);
+  assign(this, { lax: false }, options);
 }
+
 
 /**
  * Parse the given XML into a moddle document tree.
@@ -609,7 +615,7 @@ function Reader(options) {
  * @param {ElementHandler|Object} options or rootHandler
  * @param  {Function} done
  */
-Reader.prototype.fromXML = function (xml, options, done) {
+Reader.prototype.fromXML = function(xml, options, done) {
 
   var rootHandler = options.rootHandler;
 
@@ -631,14 +637,15 @@ Reader.prototype.fromXML = function (xml, options, done) {
   var model = this.model,
       lax = this.lax;
 
-  var context = new Context((0, _minDash.assign)({}, options, { rootHandler: rootHandler })),
-      parser = new _saxen.Parser({ proxy: true }),
-      stack = new _tinyStack2.default();
+  var context = new Context(assign({}, options, { rootHandler: rootHandler })),
+      parser = new SaxParser({ proxy: true }),
+      stack = new Stack();
 
   rootHandler.context = context;
 
   // push root handler
   stack.push(rootHandler);
+
 
   /**
    * Handle error.
@@ -664,7 +671,11 @@ Reader.prototype.fromXML = function (xml, options, done) {
       data = data.slice(0, data.indexOf(' ')) + '>';
     }
 
-    var message = 'unparsable content ' + (data ? data + ' ' : '') + 'detected\n\t' + 'line: ' + line + '\n\t' + 'column: ' + column + '\n\t' + 'nested error: ' + err.message;
+    var message =
+      'unparsable content ' + (data ? data + ' ' : '') + 'detected\n\t' +
+        'line: ' + line + '\n\t' +
+        'column: ' + column + '\n\t' +
+        'nested error: ' + err.message;
 
     if (lax) {
       context.addWarning({
@@ -699,7 +710,7 @@ Reader.prototype.fromXML = function (xml, options, done) {
 
     var i, r;
 
-    for (i = 0; r = references[i]; i++) {
+    for (i = 0; (r = references[i]); i++) {
       var element = r.element;
       var reference = elementsById[r.id];
       var property = getModdleDescriptor(element).propertiesByName[r.property];
@@ -760,7 +771,9 @@ Reader.prototype.fromXML = function (xml, options, done) {
     }
 
     context.addWarning({
-      message: 'unsupported document encoding <' + encoding + '>, ' + 'falling back to UTF-8'
+      message:
+        'unsupported document encoding <' + encoding + '>, ' +
+        'falling back to UTF-8'
     });
   }
 
@@ -798,42 +811,50 @@ Reader.prototype.fromXML = function (xml, options, done) {
     handleCData(text, getContext);
   }
 
-  var uriMap = model.getPackages().reduce(function (uriMap, p) {
+  var uriMap = model.getPackages().reduce(function(uriMap, p) {
     uriMap[p.uri] = p.prefix;
 
     return uriMap;
   }, {});
 
-  parser.ns(uriMap).on('openTag', function (obj, decodeStr, selfClosing, getContext) {
+  parser
+    .ns(uriMap)
+    .on('openTag', function(obj, decodeStr, selfClosing, getContext) {
 
-    // gracefully handle unparsable attributes (attrs=false)
-    var attrs = obj.attrs || {};
+      // gracefully handle unparsable attributes (attrs=false)
+      var attrs = obj.attrs || {};
 
-    var decodedAttrs = Object.keys(attrs).reduce(function (d, key) {
-      var value = decodeStr(attrs[key]);
+      var decodedAttrs = Object.keys(attrs).reduce(function(d, key) {
+        var value = decodeStr(attrs[key]);
 
-      d[key] = value;
+        d[key] = value;
 
-      return d;
-    }, {});
+        return d;
+      }, {});
 
-    var node = {
-      name: obj.name,
-      originalName: obj.originalName,
-      attributes: decodedAttrs,
-      ns: obj.ns
-    };
+      var node = {
+        name: obj.name,
+        originalName: obj.originalName,
+        attributes: decodedAttrs,
+        ns: obj.ns
+      };
 
-    handleOpen(node, getContext);
-  }).on('question', handleQuestion).on('closeTag', handleClose).on('cdata', handleCData).on('text', function (text, decodeEntities, getContext) {
-    handleText(decodeEntities(text), getContext);
-  }).on('error', handleError).on('warn', handleWarning);
+      handleOpen(node, getContext);
+    })
+    .on('question', handleQuestion)
+    .on('closeTag', handleClose)
+    .on('cdata', handleCData)
+    .on('text', function(text, decodeEntities, getContext) {
+      handleText(decodeEntities(text), getContext);
+    })
+    .on('error', handleError)
+    .on('warn', handleWarning);
 
   // deferred parse XML to make loading really ascnchronous
   // this ensures the execution environment (node or browser)
   // is kept responsive and that certain optimization strategies
   // can kick in
-  defer(function () {
+  defer(function() {
     var err;
 
     try {
@@ -856,6 +877,6 @@ Reader.prototype.fromXML = function (xml, options, done) {
   });
 };
 
-Reader.prototype.handler = function (name) {
+Reader.prototype.handler = function(name) {
   return new RootElementHandler(this.model, name);
 };

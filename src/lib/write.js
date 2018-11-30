@@ -1,25 +1,34 @@
-'use strict';
+import {
+  map,
+  forEach,
+  isString,
+  filter,
+  assign
+} from 'min-dash';
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.Namespaces = Namespaces;
-exports.Writer = Writer;
+import {
+  isSimple as isSimpleType
+} from 'moddle/lib/types';
 
-var _minDash = require('min-dash');
+import {
+  parseName as parseNameNs
+} from 'moddle/lib/ns';
 
-var _types = require('moddle/lib/types');
-
-var _ns = require('moddle/lib/ns');
-
-var _common = require('./common');
+import {
+  hasLowerCaseAlias,
+  serializeAsType,
+  serializeAsProperty,
+  DEFAULT_NS_MAP,
+  XSI_TYPE
+} from './common';
 
 var XML_PREAMBLE = '<?xml version="1.0" encoding="UTF-8"?>\n';
 
 var ESCAPE_ATTR_CHARS = /<|>|'|"|&|\n\r|\n/g;
-var ESCAPE_CHARS = /<|>|&/g;
+var ESCAPE_CHARS =  /<|>|&/g;
 
-function Namespaces(parent) {
+
+export function Namespaces(parent) {
 
   var prefixMap = {};
   var uriMap = {};
@@ -30,11 +39,13 @@ function Namespaces(parent) {
 
   // API
 
-  this.byUri = function (uri) {
-    return uriMap[uri] || parent && parent.byUri(uri);
+  this.byUri = function(uri) {
+    return uriMap[uri] || (
+      parent && parent.byUri(uri)
+    );
   };
 
-  this.add = function (ns, isWellknown) {
+  this.add = function(ns, isWellknown) {
 
     uriMap[ns.uri] = ns;
 
@@ -47,21 +58,21 @@ function Namespaces(parent) {
     this.mapPrefix(ns.prefix, ns.uri);
   };
 
-  this.uriByPrefix = function (prefix) {
+  this.uriByPrefix = function(prefix) {
     return prefixMap[prefix || 'xmlns'];
   };
 
-  this.mapPrefix = function (prefix, uri) {
+  this.mapPrefix = function(prefix, uri) {
     prefixMap[prefix || 'xmlns'] = uri;
   };
 
-  this.logUsed = function (ns) {
+  this.logUsed = function(ns) {
     var uri = ns.uri;
 
     used[uri] = this.byUri(uri);
   };
 
-  this.getUsed = function (ns) {
+  this.getUsed = function(ns) {
 
     function isUsed(ns) {
       return used[ns.uri];
@@ -71,6 +82,7 @@ function Namespaces(parent) {
 
     return allNs.filter(isUsed);
   };
+
 }
 
 function lower(string) {
@@ -78,7 +90,7 @@ function lower(string) {
 }
 
 function nameToAlias(name, pkg) {
-  if ((0, _common.hasLowerCaseAlias)(pkg)) {
+  if (hasLowerCaseAlias(pkg)) {
     return lower(name);
   } else {
     return name;
@@ -98,7 +110,7 @@ function inherits(ctor, superCtor) {
 }
 
 function nsName(ns) {
-  if ((0, _minDash.isString)(ns)) {
+  if (isString(ns)) {
     return ns;
   } else {
     return (ns.prefix ? ns.prefix + ':' : '') + ns.localName;
@@ -107,28 +119,29 @@ function nsName(ns) {
 
 function getNsAttrs(namespaces) {
 
-  return (0, _minDash.map)(namespaces.getUsed(), function (ns) {
+  return map(namespaces.getUsed(), function(ns) {
     var name = 'xmlns' + (ns.prefix ? ':' + ns.prefix : '');
     return { name: name, value: ns.uri };
   });
+
 }
 
 function getElementNs(ns, descriptor) {
   if (descriptor.isGeneric) {
-    return (0, _minDash.assign)({ localName: descriptor.ns.localName }, ns);
+    return assign({ localName: descriptor.ns.localName }, ns);
   } else {
-    return (0, _minDash.assign)({ localName: nameToAlias(descriptor.ns.localName, descriptor.$pkg) }, ns);
+    return assign({ localName: nameToAlias(descriptor.ns.localName, descriptor.$pkg) }, ns);
   }
 }
 
 function getPropertyNs(ns, descriptor) {
-  return (0, _minDash.assign)({ localName: descriptor.ns.localName }, ns);
+  return assign({ localName: descriptor.ns.localName }, ns);
 }
 
 function getSerializableProperties(element) {
   var descriptor = element.$descriptor;
 
-  return (0, _minDash.filter)(descriptor.properties, function (p) {
+  return filter(descriptor.properties, function(p) {
     var name = p.name;
 
     if (p.isVirtual) {
@@ -175,9 +188,9 @@ var ESCAPE_MAP = {
 function escape(str, charPattern, replaceMap) {
 
   // ensure we are handling strings here
-  str = (0, _minDash.isString)(str) ? str : '' + str;
+  str = isString(str) ? str : '' + str;
 
-  return str.replace(charPattern, function (s) {
+  return str.replace(charPattern, function(s) {
     return '&' + replaceMap[s] + ';';
   });
 }
@@ -197,37 +210,42 @@ function escapeBody(str) {
 }
 
 function filterAttributes(props) {
-  return (0, _minDash.filter)(props, function (p) {
-    return p.isAttr;
-  });
+  return filter(props, function(p) { return p.isAttr; });
 }
 
 function filterContained(props) {
-  return (0, _minDash.filter)(props, function (p) {
-    return !p.isAttr;
-  });
+  return filter(props, function(p) { return !p.isAttr; });
 }
+
 
 function ReferenceSerializer(tagName) {
   this.tagName = tagName;
 }
 
-ReferenceSerializer.prototype.build = function (element) {
+ReferenceSerializer.prototype.build = function(element) {
   this.element = element;
   return this;
 };
 
-ReferenceSerializer.prototype.serializeTo = function (writer) {
-  writer.appendIndent().append('<' + this.tagName + '>' + this.element.id + '</' + this.tagName + '>').appendNewLine();
+ReferenceSerializer.prototype.serializeTo = function(writer) {
+  writer
+    .appendIndent()
+    .append('<' + this.tagName + '>' + this.element.id + '</' + this.tagName + '>')
+    .appendNewLine();
 };
 
 function BodySerializer() {}
 
-BodySerializer.prototype.serializeValue = BodySerializer.prototype.serializeTo = function (writer) {
-  writer.append(this.escape ? escapeBody(this.value) : this.value);
+BodySerializer.prototype.serializeValue =
+BodySerializer.prototype.serializeTo = function(writer) {
+  writer.append(
+    this.escape
+      ? escapeBody(this.value)
+      : this.value
+  );
 };
 
-BodySerializer.prototype.build = function (prop, value) {
+BodySerializer.prototype.build = function(prop, value) {
   this.value = value;
 
   if (prop.type === 'String' && value.search(ESCAPE_CHARS) !== -1) {
@@ -243,13 +261,17 @@ function ValueSerializer(tagName) {
 
 inherits(ValueSerializer, BodySerializer);
 
-ValueSerializer.prototype.serializeTo = function (writer) {
+ValueSerializer.prototype.serializeTo = function(writer) {
 
-  writer.appendIndent().append('<' + this.tagName + '>');
+  writer
+    .appendIndent()
+    .append('<' + this.tagName + '>');
 
   this.serializeValue(writer);
 
-  writer.append('</' + this.tagName + '>').appendNewLine();
+  writer
+    .append('</' + this.tagName + '>')
+    .appendNewLine();
 };
 
 function ElementSerializer(parent, propertyDescriptor) {
@@ -260,13 +282,14 @@ function ElementSerializer(parent, propertyDescriptor) {
   this.propertyDescriptor = propertyDescriptor;
 }
 
-ElementSerializer.prototype.build = function (element) {
+ElementSerializer.prototype.build = function(element) {
   this.element = element;
 
   var elementDescriptor = element.$descriptor,
       propertyDescriptor = this.propertyDescriptor;
 
-  var otherAttrs, properties;
+  var otherAttrs,
+      properties;
 
   var isGeneric = elementDescriptor.isGeneric;
 
@@ -297,17 +320,17 @@ ElementSerializer.prototype.build = function (element) {
   return this;
 };
 
-ElementSerializer.prototype.nsTagName = function (descriptor) {
+ElementSerializer.prototype.nsTagName = function(descriptor) {
   var effectiveNs = this.logNamespaceUsed(descriptor.ns);
   return getElementNs(effectiveNs, descriptor);
 };
 
-ElementSerializer.prototype.nsPropertyTagName = function (descriptor) {
+ElementSerializer.prototype.nsPropertyTagName = function(descriptor) {
   var effectiveNs = this.logNamespaceUsed(descriptor.ns);
   return getPropertyNs(effectiveNs, descriptor);
 };
 
-ElementSerializer.prototype.isLocalNs = function (ns) {
+ElementSerializer.prototype.isLocalNs = function(ns) {
   return ns.uri === this.ns.uri;
 };
 
@@ -319,12 +342,12 @@ ElementSerializer.prototype.isLocalNs = function (ns) {
  *
  * @return {Object} nsName
  */
-ElementSerializer.prototype.nsAttributeName = function (element) {
+ElementSerializer.prototype.nsAttributeName = function(element) {
 
   var ns;
 
-  if ((0, _minDash.isString)(element)) {
-    ns = (0, _ns.parseName)(element);
+  if (isString(element)) {
+    ns = parseNameNs(element);
   } else {
     ns = element.ns;
   }
@@ -344,28 +367,30 @@ ElementSerializer.prototype.nsAttributeName = function (element) {
   if (this.isLocalNs(effectiveNs)) {
     return { localName: ns.localName };
   } else {
-    return (0, _minDash.assign)({ localName: ns.localName }, effectiveNs);
+    return assign({ localName: ns.localName }, effectiveNs);
   }
 };
 
-ElementSerializer.prototype.parseGeneric = function (element) {
+ElementSerializer.prototype.parseGeneric = function(element) {
 
   var self = this,
       body = this.body;
 
   var attributes = [];
 
-  (0, _minDash.forEach)(element, function (val, key) {
+  forEach(element, function(val, key) {
 
     var nonNsAttr;
 
     if (key === '$body') {
       body.push(new BodySerializer().build({ type: 'String' }, val));
-    } else if (key === '$children') {
-      (0, _minDash.forEach)(val, function (child) {
+    } else
+    if (key === '$children') {
+      forEach(val, function(child) {
         body.push(new ElementSerializer(self).build(child));
       });
-    } else if (key.indexOf('$') !== 0) {
+    } else
+    if (key.indexOf('$') !== 0) {
       nonNsAttr = self.parseNsAttribute(element, key, val);
 
       if (nonNsAttr) {
@@ -377,10 +402,10 @@ ElementSerializer.prototype.parseGeneric = function (element) {
   return attributes;
 };
 
-ElementSerializer.prototype.parseNsAttribute = function (element, name, value) {
+ElementSerializer.prototype.parseNsAttribute = function(element, name, value) {
   var model = element.$model;
 
-  var nameNs = (0, _ns.parseName)(name);
+  var nameNs = parseNameNs(name);
 
   var ns;
 
@@ -412,13 +437,14 @@ ElementSerializer.prototype.parseNsAttribute = function (element, name, value) {
   }
 };
 
+
 /**
  * Parse namespaces and return a list of left over generic attributes
  *
  * @param  {Object} element
  * @return {Array<Object>}
  */
-ElementSerializer.prototype.parseNsAttributes = function (element, attrs) {
+ElementSerializer.prototype.parseNsAttributes = function(element, attrs) {
   var self = this;
 
   var genericAttrs = element.$attrs;
@@ -428,7 +454,7 @@ ElementSerializer.prototype.parseNsAttributes = function (element, attrs) {
   // parse namespace attributes first
   // and log them. push non namespace attributes to a list
   // and process them later
-  (0, _minDash.forEach)(genericAttrs, function (value, name) {
+  forEach(genericAttrs, function(value, name) {
 
     var nonNsAttr = self.parseNsAttribute(element, name, value);
 
@@ -440,63 +466,69 @@ ElementSerializer.prototype.parseNsAttributes = function (element, attrs) {
   return attributes;
 };
 
-ElementSerializer.prototype.parseGenericAttributes = function (element, attributes) {
+ElementSerializer.prototype.parseGenericAttributes = function(element, attributes) {
 
   var self = this;
 
-  (0, _minDash.forEach)(attributes, function (attr) {
+  forEach(attributes, function(attr) {
 
     // do not serialize xsi:type attribute
     // it is set manually based on the actual implementation type
-    if (attr.name === _common.XSI_TYPE) {
+    if (attr.name === XSI_TYPE) {
       return;
     }
 
     try {
       self.addAttribute(self.nsAttributeName(attr.name), attr.value);
     } catch (e) {
-      console.warn('missing namespace information for ', attr.name, '=', attr.value, 'on', element, e);
+      console.warn(
+        'missing namespace information for ',
+        attr.name, '=', attr.value, 'on', element,
+        e);
     }
   });
 };
 
-ElementSerializer.prototype.parseContainments = function (properties) {
+ElementSerializer.prototype.parseContainments = function(properties) {
 
   var self = this,
       body = this.body,
       element = this.element;
 
-  (0, _minDash.forEach)(properties, function (p) {
+  forEach(properties, function(p) {
     var value = element.get(p.name),
         isReference = p.isReference,
         isMany = p.isMany;
 
     if (!isMany) {
-      value = [value];
+      value = [ value ];
     }
 
     if (p.isBody) {
       body.push(new BodySerializer().build(p, value[0]));
-    } else if ((0, _types.isSimple)(p.type)) {
-      (0, _minDash.forEach)(value, function (v) {
+    } else
+    if (isSimpleType(p.type)) {
+      forEach(value, function(v) {
         body.push(new ValueSerializer(self.addTagName(self.nsPropertyTagName(p))).build(p, v));
       });
-    } else if (isReference) {
-      (0, _minDash.forEach)(value, function (v) {
+    } else
+    if (isReference) {
+      forEach(value, function(v) {
         body.push(new ReferenceSerializer(self.addTagName(self.nsPropertyTagName(p))).build(v));
       });
     } else {
       // allow serialization via type
       // rather than element name
-      var asType = (0, _common.serializeAsType)(p),
-          asProperty = (0, _common.serializeAsProperty)(p);
+      var asType = serializeAsType(p),
+          asProperty = serializeAsProperty(p);
 
-      (0, _minDash.forEach)(value, function (v) {
+      forEach(value, function(v) {
         var serializer;
 
         if (asType) {
           serializer = new TypeSerializer(self, p);
-        } else if (asProperty) {
+        } else
+        if (asProperty) {
           serializer = new ElementSerializer(self, p);
         } else {
           serializer = new ElementSerializer(self);
@@ -508,7 +540,7 @@ ElementSerializer.prototype.parseContainments = function (properties) {
   });
 };
 
-ElementSerializer.prototype.getNamespaces = function (local) {
+ElementSerializer.prototype.getNamespaces = function(local) {
 
   var namespaces = this.namespaces,
       parent = this.parent,
@@ -527,7 +559,7 @@ ElementSerializer.prototype.getNamespaces = function (local) {
   return namespaces;
 };
 
-ElementSerializer.prototype.logNamespace = function (ns, wellknown, local) {
+ElementSerializer.prototype.logNamespace = function(ns, wellknown, local) {
   var namespaces = this.getNamespaces(local);
 
   var nsUri = ns.uri,
@@ -544,7 +576,7 @@ ElementSerializer.prototype.logNamespace = function (ns, wellknown, local) {
   return ns;
 };
 
-ElementSerializer.prototype.logNamespaceUsed = function (ns, local) {
+ElementSerializer.prototype.logNamespaceUsed = function(ns, local) {
   var element = this.element,
       model = element.$model,
       namespaces = this.getNamespaces(local);
@@ -557,8 +589,7 @@ ElementSerializer.prototype.logNamespaceUsed = function (ns, local) {
 
   var prefix = ns.prefix,
       uri = ns.uri,
-      newPrefix,
-      idx,
+      newPrefix, idx,
       wellknownUri;
 
   // handle anonymous namespaces (elementForm=unqualified), cf. #23
@@ -566,7 +597,7 @@ ElementSerializer.prototype.logNamespaceUsed = function (ns, local) {
     return { localName: ns.localName };
   }
 
-  wellknownUri = _common.DEFAULT_NS_MAP[prefix] || model && (model.getPackage(prefix) || {}).uri;
+  wellknownUri = DEFAULT_NS_MAP[prefix] || model && (model.getPackage(prefix) || {}).uri;
 
   uri = uri || wellknownUri || namespaces.uriByPrefix(prefix);
 
@@ -595,11 +626,11 @@ ElementSerializer.prototype.logNamespaceUsed = function (ns, local) {
   return ns;
 };
 
-ElementSerializer.prototype.parseAttributes = function (properties) {
+ElementSerializer.prototype.parseAttributes = function(properties) {
   var self = this,
       element = this.element;
 
-  (0, _minDash.forEach)(properties, function (p) {
+  forEach(properties, function(p) {
 
     var value = element.get(p.name);
 
@@ -607,21 +638,23 @@ ElementSerializer.prototype.parseAttributes = function (properties) {
 
       if (!p.isMany) {
         value = value.id;
-      } else {
+      }
+      else {
         var values = [];
-        (0, _minDash.forEach)(value, function (v) {
+        forEach(value, function(v) {
           values.push(v.id);
         });
         // IDREFS is a whitespace-separated list of references.
         value = values.join(' ');
       }
+
     }
 
     self.addAttribute(self.nsAttributeName(p), value);
   });
 };
 
-ElementSerializer.prototype.addTagName = function (nsTagName) {
+ElementSerializer.prototype.addTagName = function(nsTagName) {
   var actualNs = this.logNamespaceUsed(nsTagName);
 
   this.getNamespaces().logUsed(actualNs);
@@ -629,17 +662,17 @@ ElementSerializer.prototype.addTagName = function (nsTagName) {
   return nsName(nsTagName);
 };
 
-ElementSerializer.prototype.addAttribute = function (name, value) {
+ElementSerializer.prototype.addAttribute = function(name, value) {
   var attrs = this.attrs;
 
-  if ((0, _minDash.isString)(value)) {
+  if (isString(value)) {
     value = escapeAttr(value);
   }
 
   attrs.push({ name: name, value: value });
 };
 
-ElementSerializer.prototype.serializeAttributes = function (writer) {
+ElementSerializer.prototype.serializeAttributes = function(writer) {
   var attrs = this.attrs,
       namespaces = this.namespaces;
 
@@ -647,16 +680,20 @@ ElementSerializer.prototype.serializeAttributes = function (writer) {
     attrs = getNsAttrs(namespaces).concat(attrs);
   }
 
-  (0, _minDash.forEach)(attrs, function (a) {
-    writer.append(' ').append(nsName(a.name)).append('="').append(a.value).append('"');
+  forEach(attrs, function(a) {
+    writer
+      .append(' ')
+      .append(nsName(a.name)).append('="').append(a.value).append('"');
   });
 };
 
-ElementSerializer.prototype.serializeTo = function (writer) {
+ElementSerializer.prototype.serializeTo = function(writer) {
   var firstBody = this.body[0],
       indent = firstBody && firstBody.constructor !== BodySerializer;
 
-  writer.appendIndent().append('<' + this.tagName);
+  writer
+    .appendIndent()
+    .append('<' + this.tagName);
 
   this.serializeAttributes(writer);
 
@@ -665,15 +702,19 @@ ElementSerializer.prototype.serializeTo = function (writer) {
   if (firstBody) {
 
     if (indent) {
-      writer.appendNewLine().indent();
+      writer
+        .appendNewLine()
+        .indent();
     }
 
-    (0, _minDash.forEach)(this.body, function (b) {
+    forEach(this.body, function(b) {
       b.serializeTo(writer);
     });
 
     if (indent) {
-      writer.unindent().appendIndent();
+      writer
+        .unindent()
+        .appendIndent();
     }
 
     writer.append('</' + this.tagName + '>');
@@ -691,7 +732,7 @@ function TypeSerializer(parent, propertyDescriptor) {
 
 inherits(TypeSerializer, ElementSerializer);
 
-TypeSerializer.prototype.parseNsAttributes = function (element) {
+TypeSerializer.prototype.parseNsAttributes = function(element) {
 
   // extracted attributes
   var attributes = ElementSerializer.prototype.parseNsAttributes.call(this, element);
@@ -710,21 +751,24 @@ TypeSerializer.prototype.parseNsAttributes = function (element) {
   // actual type
 
   var pkg = element.$model.getPackage(typeNs.uri),
-      typePrefix = pkg.xml && pkg.xml.typePrefix || '';
+      typePrefix = (pkg.xml && pkg.xml.typePrefix) || '';
 
-  this.addAttribute(this.nsAttributeName(_common.XSI_TYPE), (typeNs.prefix ? typeNs.prefix + ':' : '') + typePrefix + descriptor.ns.localName);
+  this.addAttribute(
+    this.nsAttributeName(XSI_TYPE),
+    (typeNs.prefix ? typeNs.prefix + ':' : '') + typePrefix + descriptor.ns.localName
+  );
 
   return attributes;
 };
 
-TypeSerializer.prototype.isLocalNs = function (ns) {
+TypeSerializer.prototype.isLocalNs = function(ns) {
   return ns.uri === (this.typeNs || this.ns).uri;
 };
 
 function SavingWriter() {
   this.value = '';
 
-  this.write = function (str) {
+  this.write = function(str) {
     this.value += str;
   };
 }
@@ -733,13 +777,13 @@ function FormatingWriter(out, format) {
 
   var indent = [''];
 
-  this.append = function (str) {
+  this.append = function(str) {
     out.write(str);
 
     return this;
   };
 
-  this.appendNewLine = function () {
+  this.appendNewLine = function() {
     if (format) {
       out.write('\n');
     }
@@ -747,7 +791,7 @@ function FormatingWriter(out, format) {
     return this;
   };
 
-  this.appendIndent = function () {
+  this.appendIndent = function() {
     if (format) {
       out.write(indent.join('  '));
     }
@@ -755,12 +799,12 @@ function FormatingWriter(out, format) {
     return this;
   };
 
-  this.indent = function () {
+  this.indent = function() {
     indent.push('');
     return this;
   };
 
-  this.unindent = function () {
+  this.unindent = function() {
     indent.pop();
     return this;
   };
@@ -771,9 +815,9 @@ function FormatingWriter(out, format) {
  *
  * @param {Object} options output options to pass into the writer
  */
-function Writer(options) {
+export function Writer(options) {
 
-  options = (0, _minDash.assign)({ format: false, preamble: true }, options || {});
+  options = assign({ format: false, preamble: true }, options || {});
 
   function toXML(tree, writer) {
     var internalWriter = writer || new SavingWriter();
