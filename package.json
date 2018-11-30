@@ -44,7 +44,7 @@
   "dependencies": {
     "babel-plugin-transform-es2015-modules-commonjs": "^6.26.2",
     "min-dash": "^3.0.0",
-    "moddle": "github.com:tylerjwatson/moddle",
+    "moddle": "github:tylerjwatson/moddle",
     "saxen": "^8.1.0",
     "tiny-stack": "^1.0.0"
   }
