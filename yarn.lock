@@ -1135,8 +1135,9 @@ mocha@^4.0.1:
     mkdirp "0.5.1"
     supports-color "4.4.0"
 
-"moddle@file:../moddle":
+"moddle@github:tylerjwatson/moddle":
   version "4.1.0"
+  resolved "https://codeload.github.com/tylerjwatson/moddle/tar.gz/b94b8858ae9f64c41858c08a6917f16866a9a3f9"
   dependencies:
     min-dash "^3.0.0"
 
